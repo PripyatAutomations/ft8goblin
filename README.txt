@@ -1,6 +1,8 @@
 What is this?
 -------------
 It's a cli ft8 decoder for multiple bands.
+Right now it's still very early in development. If you know C/C++, feel free
+to jump in!
 
 Will it transmit?
 -----------------

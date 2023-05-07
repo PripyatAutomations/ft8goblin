@@ -39,7 +39,8 @@ run/*.pid
 run/*.pipe
 
 # Database sources are large and can be dealt with by the builder...
-data-sources/fcc_uls/download/*
+data-sources/fcc-uls/fcc_uls_*/*
+data-sources/fcc-uls/*.zip
 data-sources/gnis/Text/*
 data-sources/gnis/disclaimer.txt
 data-sources/gnis/*.jpg

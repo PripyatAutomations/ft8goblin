@@ -8,6 +8,7 @@ You will need the following packages installed on the host:
 If you want to use the perl scripts in scripts, you'll probably want these too:
 	libdbi-perl libxml-simple-perl libdbd-sqlite3-perl libdbd-pg-perl
 	libdbd-mysql-perl libterm-readline-perl-perl liblog-log4perl-perl
+	libtext-csv-perl
 
 If you'd like to use postgresql:
 	libpq-dev postgresql-doc postgresql-postgis postgresql-postgis-scripts
