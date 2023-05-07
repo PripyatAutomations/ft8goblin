@@ -1,2 +1,4 @@
 * Someone should make a wrapper for the Fortran from wsjt-x for better decoding
 * MySQL support might be useful for some
+* add streamer for FLAC to/from remote wsjt-x
+  - add remote hamlib interface

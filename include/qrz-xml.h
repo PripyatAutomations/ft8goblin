@@ -75,7 +75,6 @@ extern "C" {
       char		nickname[MAX_FIRSTNAME];	// nickname
    } qrz_callsign_t;
 
-   extern char *http_post(const char *url, const char *postdata);
    extern bool qrz_start_session(void);
    extern bool qrz_lookup_callsign(const char *callsign);
 #ifdef __cplusplus

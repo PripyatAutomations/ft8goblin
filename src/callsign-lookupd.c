@@ -24,7 +24,6 @@
 #include <stdlib.h>
 #include <errno.h>
 static bool callsign_use_uls = false, callsign_use_qrz = false, callsign_initialized = false;
-static bool callsign_qrz_active = false;
 
 // common shared things for our library
 const char *progname = "callsign-lookupd";
@@ -121,11 +120,13 @@ int main(int argc, char **argv) {
       if (res == false) {
          log_send(mainlog, LOG_CRIT, "Failed logging into QRZ! :(");
          exit(EACCES);
+      } else {
+         log_send(mainlog, LOG_INFO, "Succesfully logged into QRZ!");
       }
-
-      callsign_qrz_active = true;
    }
-   printf("200 OK %s %s ready to answer requests. QRZ: %s, ULS: %s, GNIS: %s\n", progname, VERSION, (callsign_qrz_active ? "On" : "Off"), (callsign_use_uls ? "On" : "Off"), (use_gnis ? "On" : "Off"));
+   printf("200 OK %s %s ready to answer requests. QRZ: %s, ULS: %s, GNIS: %s\n", progname, VERSION, (callsign_use_qrz ? "On" : "Off"), (callsign_use_uls ? "On" : "Off"), (use_gnis ? "On" : "Off"));
+
+   // example lookup
    callsign_lookup("W1AW");
    while(1) {
       sleep(1);

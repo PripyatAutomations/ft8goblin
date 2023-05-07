@@ -16,6 +16,7 @@ bin/decoderd-*
 bin/encoderd-*
 bin/sigcapd
 bin/callsign-lookupd
+bin/flac-streamerd
 
 # These might contain sensitive user data...
 etc/watchlist.txt
