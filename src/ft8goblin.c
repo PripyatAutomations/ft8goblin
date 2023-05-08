@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <time.h>
 #include <ev.h>
 #include <evutil.h>
 #include <termbox2.h>
@@ -171,11 +172,49 @@ static void print_input(void) {
    // XXX: Draw the input text area
 }
 
+void draw_fake_ta(void) {
+   int x = 0, y = 2;
+   char datebuf[128];
+
+   time_t now = time(NULL);
+   struct tm *tm = NULL;
+   int max_rnd = 5;
+   int min_rnd = 1;
+   tm = localtime(&now);
+   memset(datebuf, 0, 128);
+   strftime(datebuf, 128, "%H:%M:15", tm);
+
+   printf_tb(x, y, TB_WHITE, TB_BLACK, "%s", datebuf);
+   printf_tb(x + strlen(datebuf) + 1, y++, TB_WHITE|TB_BOLD, TB_GREEN, "[ft8-40m-1] CQ N0CALL AA12 +1200");
+
+   localtime(&now);
+   memset(datebuf, 0, 128);
+   strftime(datebuf, 128, "%H:%M:30", tm);
+
+   printf_tb(x, y, TB_WHITE|TB_WHITE, TB_BLACK, "%s", datebuf);
+   printf_tb(x + strlen(datebuf) + 1, y++, TB_WHITE, TB_CYAN, "[ft8-20m-1] CQ KT3ST EM20 +670");
+
+   printf_tb(x, y, TB_WHITE, TB_BLACK, "%s", datebuf);
+   x += strlen(datebuf) + 1;
+   char buf[512];
+   memset(buf, 0, 512);
+   snprintf(buf, 512, "[ft8-40m-1] N0CALL AA1AB EM32 +320");
+   printf_tb(x, y, TB_WHITE|TB_BOLD, TB_RED, "%s", buf);
+   x += strlen(buf);
+   printf_tb(x, y++, TB_BLACK, TB_RED, " *QSO*");
+   x = 0;
+
+   printf_tb(x, y, TB_WHITE, TB_BLACK, "%s", datebuf);
+   printf_tb(x + strlen(datebuf) + 1, y++, TB_WHITE|TB_BOLD, TB_CYAN, "[ft8-6m-1] CQ KD3ABC EN30 +550");
+   tb_present();
+}
+
 void redraw_screen(void) {
    // Show help (keys)
    print_help();
    // redraw all TextAreas
-   ta_redraw_all();
+//   ta_redraw_all();
+   draw_fake_ta();
    // print the input prompt
    print_input();
    // and the status line
