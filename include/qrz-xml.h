@@ -40,7 +40,7 @@ extern "C" {
       int		alias_count;			// how many alternate callsigns were returned?
       char		dxcc[5];			// DXCC country code (3 char)
       char		first_name[MAX_FIRSTNAME],	// first name
-                   last_name[MAX_LASTNAME];	// last name
+                        last_name[MAX_LASTNAME];	// last name
       char		address1[MAX_ADDRESS_LEN];	// address line 1
       char		address2[MAX_ADDRESS_LEN];	// address line 2
       char		address_attn;			// attn: line of address
@@ -48,24 +48,24 @@ extern "C" {
       char		zip[MAX_ZIP_LEN];		// postal code
       char		country[MAX_COUNTRY_LEN];	 // country name
       int		country_code;			// DXCC entity code
-      float	latitude;			// latitude
-      float	longitude;			// longitude
+      float		latitude;			// latitude
+      float		longitude;			// longitude
       char		grid[MAX_GRID_LEN];		// grid square (8 max)
       char		county[MAX_COUNTY];		// county name
       char		fips[12];			// FIPS code for location
       char		land[MAX_COUNTRY_LEN];		// DXCC country name
-      time_t	license_effective;		// effective date of license
-      time_t	license_expiry;			// where their license expires
+      time_t		license_effective;		// effective date of license
+      time_t		license_expiry;			// where their license expires
       char		previous_call[MAX_CALLSIGN];	// previous callsign
       char		class[MAX_CLASS_LEN];		// license class
       char		codes[MAX_CLASS_LEN];		// license type codes (USA)
       char		qsl_msg[1024];			// QSL manager contact info
       char		email[MAX_EMAIL];		// email address
       char		url[MAX_URL];			// web page URL
-      uint64_t	qrz_views;			// total views on QRZ.com
-      time_t	bio_updated;			// last time bio was updated
+      uint64_t		qrz_views;			// total views on QRZ.com
+      time_t		bio_updated;			// last time bio was updated
       char		image_url[MAX_URL];		// full url to primary image
-      uint64_t	qrz_serial;			// database serial #
+      uint64_t		qrz_serial;			// database serial #
       char		gmt_offset[12];			// GMT offset (timezone)
       bool		observes_dst;			// do they observe DST?
       bool		accepts_esql;			// accepts eQSL?

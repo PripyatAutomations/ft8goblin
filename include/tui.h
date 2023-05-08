@@ -31,7 +31,7 @@ extern "C" {
 
    // ui functions
    extern void tui_init(void);
-   extern void tui_resize_window(void);
+   extern void tui_resize_window(struct tb_event *evt);
    extern void redraw_screen(void);
    extern void tui_shutdown(void);
 

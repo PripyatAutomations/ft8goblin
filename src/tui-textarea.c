@@ -19,16 +19,24 @@ static TextArea *ta_textareas[MAX_TEXTAREAS];
 // Redraw the TextArea from the ring buffer //
 //////////////////////////////////////////////
 void ta_redraw(TextArea *ta) {
-   // Find the end of the ring buffer
-   // Start drawing from the bottom up
-   // XXX: Make this work
    if (ta->scrollback == NULL) {
+      log_send(mainlog, LOG_CRIT, "ta_redraw: ta (%p) -> scrollback == NULL", ta);
       return;
    }
+
+   ////////////////////////////////////
+   // Find the end of the ringbuffer //
+   ////////////////////////////////////
    rb_node_t *rbn = ta->scrollback->head;
    rb_node_t *latest_rn = rbn;
-
+   int loops = 0;
+   size_t max_nodes = ta->scrollback->current_size;
    do {
+      // A safety mechanism since i dislike while (true)...
+      loops++;
+      if (loops > max_nodes + 1)
+         break;
+
       if (rbn == NULL) {
          break;
       }
@@ -40,18 +48,46 @@ void ta_redraw(TextArea *ta) {
       if (rbn->next == NULL) {
          break;
       }
-      rbn = rbn->next;
+      if (rbn->next != NULL) {
+         rbn = rbn->next;
+      } else {
+         break;
+      }
    } while (true);
 
+   // XXX: rb_get_most_recent may be buggy, let's check...
    void *sb = rb_get_most_recent(ta->scrollback);
+   if (sb != latest_rn) {
+      log_send(mainlog, LOG_DEBUG, "ta_redraw: rb_get_most_recent() <%p> doesn't agree with local calculated <%p> end of ring buffer, this is probably a bug!", sb, latest_rn);
+   } else {
+      log_send(mainlog, LOG_DEBUG, "ta_redraw: rb_get_most_recent() agrees with local calculated end of ring buffer. It's probably safe of production!");
+   }
+
+   // latest_rn contains out end of the list or NULL
+   if (latest_rn == NULL) {
+      log_send(mainlog, LOG_DEBUG, "ta_redraw: latest_rn == (NULL)");
+      return; 
+   }
+
+   //////////////////////////////////////////
+   // Draw the TextArea from the bottom up //
+   //////////////////////////////////////////
    for (int i = ta->bottom; i > ta->top; i--) {
       // Draw the current line of the ring buffer
+      int offset = 0;
+      char *bp = (char *)latest_rn->data;
+      if (bp == NULL) {
+         log_send(mainlog, LOG_CRIT, "ta_redraw: ta: %p sb: %p latest_rn: %p ->data: (NULL)", ta, ta->scrollback, latest_rn);
+         continue;	// XXX: is this the right action here?
+      }
 
       // Is the previous line valid?
-
       // If not, break
 //      break;
+      // If so, render it
+      printf_tb(offset, i, TB_DEFAULT, TB_DEFAULT, "%s", latest_rn->data);
    }
+   tb_present();
 }
 
 void ta_resize(TextArea *ta) {
@@ -167,3 +203,19 @@ void ta_resize_all(void) {
       ta_resize(ta_textareas[i]);
    }
 }
+
+/*
+//      struct tb_event *evt;
+//      void (*callback)();
+Keymap *main_keymap[] = {
+   {
+      .evt = {
+         .type == TB_EVENT_KEY,
+         .key = TB_KEY_ESC
+      },
+   },
+   {
+      .evt = NULL
+   }
+}
+*/

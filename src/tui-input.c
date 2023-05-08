@@ -88,7 +88,7 @@ void process_input(struct tb_event *evt) {
       }
    } else if (evt->type == TB_EVENT_RESIZE) {
       // change the stored dimensions/layout variables above
-      tui_resize_window();
+      tui_resize_window(evt);
 
       // clear the screen buffer
       tb_clear();

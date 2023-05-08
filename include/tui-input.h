@@ -7,8 +7,9 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-   // you need to create an array of these, with the desired key as index
+   // make a keymap out of these? ;)
    typedef struct Keymap {
+      struct tb_event *evt;
       void (*callback)();
    } Keymap;
 

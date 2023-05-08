@@ -42,15 +42,13 @@ static void qrz_init_string(qrz_string_t *s) {
   s->ptr[0] = '\0';
 }
 
-bool qrz_parse_http_data(const char *buf, void *ptr) {
+bool qrz_parse_http_data(const char *buf, qrz_callsign_t *calldata) {
    char *key = NULL, *message = NULL, *error = NULL;
    uint64_t count = 0;
    time_t sub_exp_time = -1, qrz_gmtime = -1;
    char *newkey = NULL;
-   char *new_calldata = NULL;
 
    qrz_session_t *q = qrz_session;
-   qrz_callsign_t *calldata = (qrz_callsign_t *)ptr;
 
    if (q == NULL) {
       if ((q = malloc(sizeof(qrz_session_t))) == NULL) {
@@ -354,13 +352,12 @@ bool qrz_lookup_callsign(const char *callsign) {
 
    log_send(mainlog, LOG_INFO, "looking up callsign %s via QRZ XML API", callsign);
 
-   // 
    if (http_post(buf, NULL, outbuf, sizeof(outbuf)) != false) {
       memset(outbuf, 0, 32769);
-      qrz_parse_http_data(outbuf, (void *)calldata);
-
-//      log_send(mainlog, LOG_DEBUG, "calldata: callsign=%s", calldata.callsign);
+      qrz_parse_http_data(outbuf, calldata);
+      log_send(mainlog, LOG_DEBUG, "calldata: %p", calldata);
    }
+   free(calldata);
 
    return true;
 }
