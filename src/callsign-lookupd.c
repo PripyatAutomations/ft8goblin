@@ -95,6 +95,26 @@ static void exit_fix_config(void) {
    exit(255);
 }
 
+// dump all the set attributes of a qrz_callsign to the screen
+bool callsign_dump(qrz_callsign_t *callsign) {
+   if (callsign == NULL) {
+      return false;
+   }
+
+   // 200 OK N0CALL ONLINE 1683541080 QRZ
+   // Lookup for N0CALL succesfully performed using QRZ online (not cached)
+   // at Mon May  8 06:18:00 AM EDT 2023.
+   // 200 OK N0CALL CACHE 1683541080 QRZ EXPIRES 1683800280
+   // Lookup for N0CALL was answered by the cache.
+   // The answer originally came from QRZ at Mon May  8 06:18:00 AM EDT 2023
+   // and will expire (if we go online) at Thu May 11 06:18:00 AM EDT 2023.
+   fprintf(stdout, "200 OK %s ONLINE %lu %s", callsign->callsign, time(NULL), "QRZ");
+
+   // XXX: Look for properties that aren't NULL and print them nicely for the user
+   // XXX: while still being machine friendly!
+   return true;
+}
+
 int main(int argc, char **argv) {
    bool res = false;
 
@@ -126,9 +146,16 @@ int main(int argc, char **argv) {
    }
    printf("200 OK %s %s ready to answer requests. QRZ: %s, ULS: %s, GNIS: %s\n", progname, VERSION, (callsign_use_qrz ? "On" : "Off"), (callsign_use_uls ? "On" : "Off"), (use_gnis ? "On" : "Off"));
 
-   // example lookup
+   // if called with a callsign, look it up, return the parsed output and exit
    if (argc > 1) {
-      callsign_lookup(argv[1]);
+      qrz_callsign_t *callsign = callsign_lookup(argv[1]);
+
+      if (callsign != NULL) {
+         callsign_dump(callsign);
+      } else {
+         fprintf(stdout, "404 callsign %s is unknown.", argv[1]);
+       }
+      exit(0);
    }
 
    while(1) {

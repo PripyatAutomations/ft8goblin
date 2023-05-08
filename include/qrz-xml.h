@@ -34,6 +34,7 @@ extern "C" {
    } qrz_session_t;
 
    typedef struct qrz_callsign {
+      int	cached;			// did this result come from cache?
       char		callsign[MAX_CALLSIGN];		// callsign
       char		query_callsign[MAX_CALLSIGN];	// queried callsign (the one sent in the request)
       char		*aliases[MAX_QRZ_ALIASES];	// array of alternate callsigns, these MUST be free()d
