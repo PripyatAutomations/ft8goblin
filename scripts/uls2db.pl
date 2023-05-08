@@ -158,20 +158,20 @@ for my $dataset (@datasets) {
         my $unique_system_identifier = $record[1];
         my $uls_file_number = $record[2];
         my $ebf_number = $record[3];
-        my $callsign = $record[4];
-        my $operator_class = $record[5];
-        my $group_code = $record[6];
-        my $region_code = $record[7];
-        my $trustee_callsign = $record[8];
-        my $trustee_indicator = $record[9];
-        my $physician_certification = $record[10];
-        my $ve_signature = $record[11];
-        my $systematic_callsign_change = $record[12];
-        my $vanity_callsign_change = $record[13];
-        my $vanity_relationship = $record[14];
-        my $previous_callsign = $record[15];
-        my $previous_operator_class = $record[16];
-        my $trustee_name = $record[17];
+        my $callsign = uc $record[4];
+        my $operator_class = uc $record[5];
+        my $group_code = uc $record[6];
+        my $region_code = uc $record[7];
+        my $trustee_callsign = uc $record[8];
+        my $trustee_indicator = uc $record[9];
+        my $physician_certification = uc $record[10];
+        my $ve_signature = uc $record[11];
+        my $systematic_callsign_change = uc $record[12];
+        my $vanity_callsign_change = uc $record[13];
+        my $vanity_relationship = uc $record[14];
+        my $previous_callsign = uc $record[15];
+        my $previous_operator_class = uc $record[16];
+        my $trustee_name = uc $record[17];
 
         # Insert the record into SQL...
         $am_insert_stmt->execute($unique_system_identifier, $uls_file_number, $ebf_number, $callsign, $operator_class,
@@ -183,40 +183,33 @@ for my $dataset (@datasets) {
         my $unique_system_identifier = $record[1];
         my $uls_file_number = $record[2];
         my $ebf_number = $record[3];
-        my $callsign = $record[4];
-        my $entity_type = $record[5];
-        my $licensee_id = $record[6];
-        my $entity_name = $record[7];
-        my $first_name = $record[8];
-        my $mi = $record[9];
-        my $last_name = $record[10];
-        my $suffix = $record[11];
-        my $phone = $record[12];
+        my $callsign = uc $record[4];
+        my $entity_type = uc $record[5];
+        my $licensee_id = uc $record[6];
+        my $entity_name = uc $record[7];
+        my $first_name = uc $record[8];
+        my $mi = uc $record[9];
+        my $last_name = uc $record[10];
+        my $suffix = uc $record[11];
+        my $phone = uc $record[12];
         my $fax = $record[13];
-        my $email = $record[14];
-        my $street_adress = $record[15];
-        my $city = $record[16];
-        my $state = $record[17];
+        my $email = lc $record[14];
+        my $street_adress = uc $record[15];
+        my $city = uc $record[16];
+        my $state = uc $record[17];
         my $zip_code = $record[18];
-        my $po_box = $record[19];
-        my $attention_line = $record[20];
-        my $sgin = $record[21];
+        my $po_box = uc $record[19];
+        my $attention_line = uc $record[20];
+        my $sgin = uc $record[21];
         my $frn = $record[22];
-        my $applicant_type_code = $record[23];
-        my $applicant_type_other = $record[24];
-        my $status_code = $record[25];
-        my $lic_category_code = $record[26];
-        my $linked_license_id = $record[27];
-        my $linked_callsign = $record[28];
-#        print "processing EN record for callsign $callsign\n";
-#        print "et: $entity_type, lid: $licensee_id, en: $entity_name, fn: $first_name,";
-#        print "mi: $mi, ln: $last_name, su: $suffix, ph: $phone, fa: $fax, em: $email, sa: $street_adress, ci: $city, st: $state,";
-#        print "zc: $zip_code, pb: $po_box, al: $attention_line, sg: $sgin, fr: $frn, ac: $applicant_type_code,";
-#        print "ao: $applicant_type_other, sc: $status_code, lc: $lic_category_code, li: $linked_license_id,";
-#        print "lc: $linked_callsign, us: $unique_system_identifier)\n";
-        if (($in_lines % 10000) == 0) {
-           print "Processing record $in_lines in dataset $dataset\n";
-        }
+        my $applicant_type_code = uc $record[23];
+        my $applicant_type_other = uc $record[24];
+        my $status_code = uc $record[25];
+        my $status_rate = uc $record[26];
+        my $lic_category_code = uc $record[27];
+        my $linked_license_id = $record[28];
+        my $linked_callsign = uc $record[29];
+
 
         $en_insert_stmt->execute($entity_type, $licensee_id, $entity_name, $first_name, $mi,
            $last_name, $suffix, $phone, $fax, $email, $street_adress, $city, $state,

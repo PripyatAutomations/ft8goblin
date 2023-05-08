@@ -1,3 +1,6 @@
+/*
+ * This needs much improvement and a lot of src/tui-textarea.c belongs as a keymap here
+ */
 #include "config.h"
 #include "subproc.h"
 #include "util.h"
@@ -100,12 +103,6 @@ static void print_status(void) {
    offset += 6;
    printf_tb(offset, height - 1, TB_CYAN|TB_BOLD, 0, "%s", mycall);
    offset += strlen(mycall);
-//   printf_tb(offset, height - 1, TB_WHITE|TB_BOLD, 0, "] ");
-//   offset += 2;
-
-   // grid square
-//   printf_tb(offset, height - 1, TB_WHITE|TB_BOLD, 0, "[MyGrid:");
-//   offset += 8;
    printf_tb(offset++, height - 1, TB_RED|TB_BOLD, 0, "@");
    printf_tb(offset, height - 1, TB_CYAN|TB_BOLD, 0, "%s", gridsquare);
    offset += strlen(gridsquare);
@@ -175,10 +172,15 @@ static void print_input(void) {
 }
 
 void redraw_screen(void) {
+   // Show help (keys)
    print_help();
+   // redraw all TextAreas
    ta_redraw_all();
+   // print the input prompt
    print_input();
+   // and the status line
    print_status();
+   // the render it!
    tb_present();
 }
 
@@ -207,7 +209,7 @@ int main(int argc, char **argv) {
    tui_init();
    // create the default TextArea for messages
    msgbox = ta_init(cfg_get_int(cfg, "ui/scrollback-lines"));
-   tui_resize_window();
+   tui_resize_window(NULL);
    tui_io_watcher_init();
    ta_printf(msgbox, "$CYAN$Welcome to ft8goblin, a console ft8 client with support for multiple bands!");
 

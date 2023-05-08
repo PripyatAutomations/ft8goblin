@@ -97,9 +97,14 @@ ColorPair parse_color_str(const char *str) {
    return cp;
 }
 
-void tui_resize_window(void) {
-   height = tb_height();
-   width = tb_width();
+void tui_resize_window(struct tb_event *evt) {
+   if (evt == NULL) {
+      height = tb_height();
+      width = tb_width();
+   } else {
+      height = evt->h;
+      width = evt->w;
+   }
 
    if (width < 80 || height < 20) {
       tb_clear();

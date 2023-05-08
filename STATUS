@@ -1,0 +1,20 @@
+binaries
+--------
+    callsign-lookupd:
+            * QRZ
+                    * Login: WORKING
+                    * Callsign Lookup: WIP
+    decoderd-ft8:
+            * some example code, not yet started really
+
+    encoderd-ft8:
+            * may reuse example code for some
+
+    flac-streamerd:
+            * placeholder, NYI
+
+    ft8goblin:
+            * TUI
+                    * TextArea: widget needs finished
+    sigcapd:
+            * placeholder, NYI
