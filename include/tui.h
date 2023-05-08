@@ -2,6 +2,7 @@
 #define	_tui_h
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include "ringbuffer.h"
@@ -46,6 +47,7 @@ extern "C" {
    extern int view_config(void);
    extern int dying;			// Are we shutting down?
    extern int tx_enabled;		// Master toggle to TX mode.
+   extern bool tx_even;			// TX even or odd time slot?
 #ifdef __cplusplus
 };
 #endif

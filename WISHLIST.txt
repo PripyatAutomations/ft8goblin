@@ -2,3 +2,4 @@
 * MySQL support might be useful for some
 * add streamer for FLAC to/from remote wsjt-x
   - add remote hamlib interface
+* Support for importing from websdr

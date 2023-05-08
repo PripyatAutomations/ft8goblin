@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <ev.h>
 #include <evutil.h>
 #include <termbox2.h>
@@ -25,6 +26,7 @@ int	line_status = -1;		// status line
 int 	line_input = -1;		// input field
 int	height = -1, width = -1;
 int	active_band = 40;		// Which band are we TXing on?
+bool	tx_even = false;		// TX even or odd cycle?
 int	active_pane = 1;		// active pane (0: TextArea, 1: TX input)
 
 static void exit_fix_config(void) {
@@ -36,6 +38,10 @@ static void print_help(void) {
    int offset = 0;
    printf_tb(offset, 0, TB_GREEN|TB_BOLD, 0, "*Keys* ");
    offset += 7;
+   printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "^Q/^X ");
+   offset += 6;
+   printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Exit ");
+   offset += 5;
    printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "ESC ");
    offset += 4;
    printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Go Back ");
@@ -45,25 +51,26 @@ static void print_help(void) {
    offset += 4;
    printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Switch Pane ");
    offset += 12;
-   printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "^Q/^X ");
-   offset += 6;
-   printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Exit ");
-   offset += 5;
-   printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "^B ");
+   printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "^H ");
    offset += 3;
-   printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Bands ");
-   offset += 6;
+   printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Halt TX now ");
+   offset += 12;
    printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "^S ");
    offset += 3;
    printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Settings ");
-   offset += 8;
+   offset += 9;
    printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "^T ");
    offset += 3;
    printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Toggle TX ");
    offset += 10;
-   printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "^H ");
+   printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "^E ");
    offset += 3;
-   printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Halt TX immed.");
+   printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Even/Odd");
+   offset += 10;
+   printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "^B ");
+   offset += 3;
+   printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Bands ");
+   offset += 6;
 }
 
 static void print_status(void) {
@@ -86,7 +93,7 @@ static void print_status(void) {
    }
 
    printf_tb(offset, height - 1, TB_YELLOW|TB_BOLD, 0, "%s ", outstr);
-   offset += 10;
+   offset += 9;
 
    // callsign
    printf_tb(offset, height - 1, TB_WHITE|TB_BOLD, 0, "[Oper:");
@@ -130,6 +137,16 @@ static void print_status(void) {
    if (active_band != 0) {
       printf_tb(offset, height - 1, TB_RED|TB_BOLD, 0, "%dm", active_band);
       offset += 3;
+
+      printf_tb(offset++, height - 1, TB_WHITE|TB_BOLD, 0, "/");
+
+      if (tx_even) {
+         printf_tb(offset, height - 1, TB_YELLOW|TB_BOLD, 0, "EVEN");
+         offset += 4;
+      } else {
+         printf_tb(offset, height - 1, TB_YELLOW|TB_BOLD, 0, "ODD");
+         offset += 3;
+      }
    }
 
    printf_tb(offset, height - 1, TB_WHITE|TB_BOLD, 0, "] ");

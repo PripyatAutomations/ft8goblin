@@ -127,7 +127,10 @@ int main(int argc, char **argv) {
    printf("200 OK %s %s ready to answer requests. QRZ: %s, ULS: %s, GNIS: %s\n", progname, VERSION, (callsign_use_qrz ? "On" : "Off"), (callsign_use_uls ? "On" : "Off"), (use_gnis ? "On" : "Off"));
 
    // example lookup
-   callsign_lookup("W1AW");
+   if (argc > 1) {
+      callsign_lookup(argv[1]);
+   }
+
    while(1) {
       sleep(1);
    }

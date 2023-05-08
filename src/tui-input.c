@@ -3,6 +3,7 @@
 //   
 // XXX: We need to make keymaps a loadable thing, so each menu, pane, etc can select its own keymap
 // XXX: This would make things a lot more pleasant for everyone!
+// XXX: a lot of this code belongs in ft8goblin.c... someday it'll happen
 #include "config.h"
 #include "debuglog.h"
 #include "tui.h"
@@ -16,6 +17,7 @@ static ev_timer periodic_watcher;
 extern TextArea *msgbox;
 time_t now = 0;
 
+// XXX: This is the biggest offender of code that belongs in ft8goblin.c, not here!
 void process_input(struct tb_event *evt) {
    if (evt == NULL) {
       log_send(mainlog, LOG_CRIT, "process_input: called with ev == NULL. This shouldn't happen!");
@@ -37,14 +39,23 @@ void process_input(struct tb_event *evt) {
            else
               active_pane = 0;
         }
-      } else if (evt->key == TB_KEY_ARROW_LEFT) { 			// left cursor
-      } else if (evt->key == TB_KEY_ARROW_RIGHT) {			// right cursor
+      } else if (evt->key == TB_KEY_ARROW_LEFT) { 		// left cursor
+      } else if (evt->key == TB_KEY_ARROW_RIGHT) {		// right cursor
       } else if (evt->key == TB_KEY_ARROW_UP) {			// up cursor
-      } else if (evt->key == TB_KEY_ARROW_DOWN) {			// down cursor
+      } else if (evt->key == TB_KEY_ARROW_DOWN) {		// down cursor
       } else if (evt->key == TB_KEY_CTRL_B) {			// ^B
-         if (menu_level == 0) {			// only if we're at main TUI screen (not in a menu)
+         if (menu_level == 0) {					// only if we're at main TUI screen (not in a menu)
             menu_show(&menu_bands, 0);
          }
+      } else if (evt->key == TB_KEY_CTRL_E) {			// ^E
+         // toggle TX Even/Odd
+         if (tx_even == false) {
+            tx_even = true;
+         } else {
+            tx_even = false;
+         }
+         redraw_screen();
+         log_send(mainlog, LOG_INFO, "Toggled to %s TX slot!", (tx_even ? "EVEN" : "ODD"));
       } else if (evt->key == TB_KEY_CTRL_H) {			// ^H
          halt_tx_now();
       } else if (evt->key == TB_KEY_CTRL_S) { 			// Is it ^S?

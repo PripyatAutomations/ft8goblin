@@ -23,6 +23,7 @@ extern char *progname;
 time_t now;
 static const char *qrz_user = NULL, *qrz_pass = NULL, *qrz_api_key = NULL, *qrz_api_url;
 static qrz_session_t *qrz_session = NULL;
+static bool already_logged_in = false;
 bool qrz_active = true;
 
 // XXX: Add some code to support retrying login a few times, if error other than invalid credentials occurs
@@ -57,7 +58,10 @@ bool qrz_parse_http_data(const char *buf, void *ptr) {
          exit(ENOMEM);
       }
       memset(q, 0, sizeof(qrz_session_t));
-      qrz_session = q;
+
+      if (qrz_session == NULL)
+         qrz_session = q;
+
       q->count = -1;
       q->sub_expiration = 0;
    }
@@ -80,10 +84,9 @@ bool qrz_parse_http_data(const char *buf, void *ptr) {
          memset(newkey, 0, key_len + 1);
          snprintf(newkey, key_len + 1, "%s", key);
             
-         log_send(mainlog, LOG_DEBUG, "qrz_xml_api: Got session key: %s, key_len: %lu", newkey, key_len);
-
+//         log_send(mainlog, LOG_DEBUG, "qrz_xml_api: Got session key: %s, key_len: %lu", newkey, key_len);
          // XXX: In theory, this will be slightly less CPU cycles in the frequent case the key is unchanged.
-         // We need to deal with the case of QRZ returning a new key when one expires during a lookup...
+         // We need to deal with the case of QRZ returning a new key when one expires during a lookup, however...
          if (strncmp(q->key, newkey, MAX(key_len, strlen(q->key))) != 0) {
             memset(q->key, 0, 33);
             snprintf(q->key, 33, "%s", newkey);
@@ -106,7 +109,7 @@ bool qrz_parse_http_data(const char *buf, void *ptr) {
          memset(new_sub_exp, 0, sub_exp_len + 1);
          snprintf(new_sub_exp, sub_exp_len + 1, "%s", sub_exp);
             
-         log_send(mainlog, LOG_DEBUG, "qrz_xml_api: Got SubExp: %s, len: %lu", new_sub_exp, sub_exp_len);
+//         log_send(mainlog, LOG_DEBUG, "qrz_xml_api: Got SubExp: %s, len: %lu", new_sub_exp, sub_exp_len);
 
          struct tm tm;
          time_t myret = -1;
@@ -141,20 +144,37 @@ bool qrz_parse_http_data(const char *buf, void *ptr) {
             log_send(mainlog, LOG_CRIT, "qrz_xml_api: Got invalid response from atoi: %d: %s", errno, strerror(errno));
          } else {
             q->count = n;
-            log_send(mainlog, LOG_DEBUG, "qrz_xml_api: Got Count: %d", q->count);
+//            log_send(mainlog, LOG_DEBUG, "qrz_xml_api: Got Count: %d", q->count);
          }
       }
    }	// count != NULL
 
-   if (q->sub_expiration > 0 && q->key[0] != '\0' && count >= -1) {
+   if (q->sub_expiration > 0 && q->key[0] != '\0' && q->count >= -1) {
       char datebuf[128];
       struct tm *tm;
       memset(datebuf, 0, 128);
-      tm = localtime(&q->sub_expiration);
-      strptime(datebuf, "%a %b %d %H:%M:%S %Y", tm);
-      log_send(mainlog, LOG_INFO, "Logged into QRZ. Your subscription expires %s. You've used %d queries today.", datebuf, q->count);
-   } else {
-      log_send(mainlog, LOG_DEBUG, "xxx: sub expires %lu, you've used %d queries today. key is %sset: <%s>", q->sub_expiration, q->count, (q->key[0] == '\0' ? "" : "un"), q->key);
+      if ((tm = localtime(&q->sub_expiration)) == NULL) {
+         log_send(mainlog, LOG_CRIT, "localtime() failed");
+         exit(255);
+      }
+
+      if (strftime(datebuf, 128, "%Y/%m/%d %H:%M:%S", tm) == 0 && errno != 0) {
+         log_send(mainlog, LOG_CRIT, "strftime() failed");
+         exit(254);
+      }
+
+      time_t mynow = time(NULL);
+      if (q->sub_expiration <= mynow + 7776000) {		// 90 days
+         log_send(mainlog, LOG_NOTICE, "QRZ subscription expires within 90 days (%d days).", (mynow - q->sub_expiration) / 86400);
+      } else if (q->sub_expiration <= mynow + 5184000) {	// 60 days
+         log_send(mainlog, LOG_NOTICE, "QRZ subscription expires within 60 days (%d days), you should consider renewing soon...", (mynow - q->sub_expiration) / 86400);
+      } else if (q->sub_expiration <= mynow + 2592000) {	// 30 days
+         log_send(mainlog, LOG_CRIT, "QRZ subscription expires within 30 days (%d days), you really should renew soon...", (mynow - q->sub_expiration) / 86400);
+      }
+      if (!already_logged_in) {
+         log_send(mainlog, LOG_INFO, "Logged into QRZ. Your subscription expires %s. You've used %d queries today.", datebuf, q->count);
+         already_logged_in = true;
+      }
    }
 
    ////////////
@@ -166,15 +186,17 @@ bool qrz_parse_http_data(const char *buf, void *ptr) {
          char *callsign_end = strstr(callsign, "</Callsign>");
          size_t callsign_len = (callsign_end - callsign);
 
+         // XXX: it should be a good bit larger if valid.. figure out minimal valid size..
          if (callsign_len >= 10) {
             char new_calldata[callsign_len + 1];
             memset(new_calldata, 0, callsign_len + 1);
             snprintf(new_calldata, callsign_len, "%s", callsign);
             log_send(mainlog, LOG_INFO, "Got Callsign data <%lu bytes>: %s", callsign_len, new_calldata);
             /* Here we need to break out the fields and apply them to their respective parts of the qrz_callsign_t */
-            // XXX: We need to 
             return true;
          }
+      } else {
+         log_send(mainlog, LOG_DEBUG, "calldata NULL");
       }
    }
    // if we fell through to here, we were not succesful...
@@ -203,7 +225,7 @@ static size_t qrz_http_post_cb(void *ptr, size_t size, size_t nmemb, qrz_string_
    s->ptr[new_len] = '\0';
    s->len = new_len;
 
-   log_send(mainlog, LOG_DEBUG, "qrz_http_post_cb: read (len=%lu): |%s|", s->len, s->ptr);
+//   log_send(mainlog, LOG_DEBUG, "qrz_http_post_cb: read (len=%lu): |%s|", s->len, s->ptr);
 
    return size * nmemb;
 }
@@ -257,9 +279,8 @@ bool http_post(const char *url, const char *postdata, char *buf, size_t bufsz) {
       s.len = -1;
       return false;
    } else if (s.len > 0) {
-      // if anything was retrieved, send it to the parse
+      // if anything was retrieved, send it to the parser
       snprintf(buf, bufsz, "%s", s.ptr);
-      log_send(mainlog, LOG_DEBUG, "copying %s <%lu> to buf", s.ptr, bufsz);
    }
    free(s.ptr);
    s.ptr = NULL;
@@ -268,7 +289,7 @@ bool http_post(const char *url, const char *postdata, char *buf, size_t bufsz) {
    curl_easy_cleanup(curl);
    curl_global_cleanup();
 
-   return false;
+   return true;
 }
 
 bool qrz_start_session(void) {
@@ -296,7 +317,7 @@ bool qrz_start_session(void) {
 
    // send the request, once it completes, we should have all the data
    if (http_post(buf, NULL, outbuf, sizeof(outbuf)) != false) {
-      log_send(mainlog, LOG_DEBUG, "sending %lu bytes <%s> to parser", strlen(outbuf), outbuf);
+//      log_send(mainlog, LOG_DEBUG, "sending %lu bytes <%s> to parser", strlen(outbuf), outbuf);
       qrz_parse_http_data(outbuf, NULL);
 
       // reset the failure counter...
@@ -315,7 +336,12 @@ bool qrz_start_session(void) {
 
 bool qrz_lookup_callsign(const char *callsign) {
    char buf[32769], outbuf[32769];
-   qrz_callsign_t calldata;
+   qrz_callsign_t *calldata = malloc(sizeof(qrz_callsign_t));
+
+   if (calldata == NULL) {
+      fprintf(stderr, "qrz_lookup_callsign: out of memory!\n");
+      exit(ENOMEM);
+   }
 
    if (callsign == NULL || qrz_api_url == NULL || qrz_session == NULL) {
       log_send(mainlog, LOG_WARNING, "qrz_lookup_callsign failed, XML API session is not yet active!");
@@ -326,14 +352,14 @@ bool qrz_lookup_callsign(const char *callsign) {
    memset(buf, 0, sizeof(buf));
    snprintf(buf, sizeof(buf), "%s?s=%s;callsign=%s", qrz_api_url, qrz_session->key, callsign);
 
-   log_send(mainlog, LOG_DEBUG, "looking up callsign %s via QRZ XML API", callsign);
+   log_send(mainlog, LOG_INFO, "looking up callsign %s via QRZ XML API", callsign);
 
    // 
    if (http_post(buf, NULL, outbuf, sizeof(outbuf)) != false) {
       memset(outbuf, 0, 32769);
-      qrz_parse_http_data(outbuf, &calldata);
+      qrz_parse_http_data(outbuf, (void *)calldata);
 
-      log_send(mainlog, LOG_DEBUG, "calldata: callsign=%s", calldata.callsign);
+//      log_send(mainlog, LOG_DEBUG, "calldata: callsign=%s", calldata.callsign);
    }
 
    return true;
