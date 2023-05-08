@@ -1,4 +1,6 @@
 # Exclude build artifacts
+obj/
+obj/*
 obj/*.map
 obj/*.o
 obj/*.so
@@ -54,3 +56,5 @@ data-sources/gnis/*.7z
 ##############
 # Tests...
 qrztest*
+scripts/test/
+scripts/test/*
