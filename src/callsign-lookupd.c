@@ -108,7 +108,7 @@ bool callsign_dump(qrz_callsign_t *callsign) {
    // Lookup for N0CALL was answered by the cache.
    // The answer originally came from QRZ at Mon May  8 06:18:00 AM EDT 2023
    // and will expire (if we go online) at Thu May 11 06:18:00 AM EDT 2023.
-   fprintf(stdout, "200 OK %s ONLINE %lu %s", callsign->callsign, time(NULL), "QRZ");
+   fprintf(stdout, "200 OK %s ONLINE %lu %s\n", callsign->callsign, time(NULL), "QRZ");
 
    // XXX: Look for properties that aren't NULL and print them nicely for the user
    // XXX: while still being machine friendly!
@@ -153,7 +153,7 @@ int main(int argc, char **argv) {
       if (callsign != NULL) {
          callsign_dump(callsign);
       } else {
-         fprintf(stdout, "404 callsign %s is unknown.", argv[1]);
+         fprintf(stdout, "404 callsign %s is unknown\n", argv[1]);
        }
       exit(0);
    }

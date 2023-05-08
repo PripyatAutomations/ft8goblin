@@ -3,6 +3,8 @@ Here's a rough draft of how things work
 	callsign-lookupd
 		Looks up call signs via QRZ XML API and local FCC ULS database.
 		Caches the results of lookups for fast recall, using sqlite3.
+		- You can call it directly with a single argument (a
+		  callsign) to look up a record on QRZ / ULS.
 
 	ft8goblin (Main process)
 		Provides a user interface for this mess.
