@@ -42,6 +42,7 @@ extern "C" {
    typedef struct qrz_callsign {
       callsign_datasrc_t origin;			// origin of the data
       int		cached;				// did this result come from cache?
+      time_t		cache_fetched, cache_expiry;	// when did we download it? when does it expire?
       char		callsign[MAX_CALLSIGN];		// callsign
       char		query_callsign[MAX_CALLSIGN];	// queried callsign (the one sent in the request)
       char		*aliases[MAX_QRZ_ALIASES];	// array of alternate callsigns, these MUST be free()d
@@ -65,7 +66,7 @@ extern "C" {
       time_t		license_effective;		// effective date of license
       time_t		license_expiry;			// where their license expires
       char		previous_call[MAX_CALLSIGN];	// previous callsign
-      char		class[MAX_CLASS_LEN];		// license class
+      char		opclass[MAX_CLASS_LEN];		// license class
       char		codes[MAX_CLASS_LEN];		// license type codes (USA)
       char		qsl_msg[1024];			// QSL manager contact info
       char		email[MAX_EMAIL];		// email address

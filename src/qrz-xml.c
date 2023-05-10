@@ -82,7 +82,7 @@ bool qrz_parse_http_data(const char *buf, qrz_callsign_t *calldata) {
          memset(newkey, 0, key_len + 1);
          snprintf(newkey, key_len + 1, "%s", key);
             
-//         log_send(mainlog, LOG_DEBUG, "qrz_xml_api: Got session key: %s, key_len: %lu", newkey, key_len);
+         log_send(mainlog, LOG_DEBUG, "qrz_xml_api: Got session key: %s, key_len: %lu", newkey, key_len);
          // XXX: In theory, this will be slightly less CPU cycles in the frequent case the key is unchanged.
          // We need to deal with the case of QRZ returning a new key when one expires during a lookup, however...
          if (strncmp(q->key, newkey, MAX(key_len, strlen(q->key))) != 0) {
@@ -133,8 +133,6 @@ bool qrz_parse_http_data(const char *buf, qrz_callsign_t *calldata) {
          memset(buf, 0, 256);
          snprintf(buf, count_len + 1, "%s", countp);
 
-//         log_send(mainlog, LOG_DEBUG, ">>>countp: %s (%p), count_end: %s (%p)<<<", countp, countp, count_end, count_end);
-//         log_send(mainlog, LOG_DEBUG, ">>>buf: %s (%d)<<<", buf, count_len);
          int n = -1;
          n = atoi(buf);
          if (n == 0 && errno != 0) {
@@ -147,6 +145,7 @@ bool qrz_parse_http_data(const char *buf, qrz_callsign_t *calldata) {
       }
    }	// count != NULL
 
+   // is the session started?
    if (q->sub_expiration > 0 && q->key[0] != '\0' && q->count >= -1) {
       char datebuf[128];
       struct tm *tm;
@@ -161,13 +160,18 @@ bool qrz_parse_http_data(const char *buf, qrz_callsign_t *calldata) {
          exit(254);
       }
 
+      // warn the user about upcoming QRZ subscription expiration starting at 90 days...
       time_t mynow = time(NULL);
-      if (q->sub_expiration <= mynow + 7776000) {		// 90 days
+      if (q->sub_expiration <= mynow + 7776000) {		// <= 90 days
          log_send(mainlog, LOG_NOTICE, "QRZ subscription expires within 90 days (%d days).", (mynow - q->sub_expiration) / 86400);
-      } else if (q->sub_expiration <= mynow + 5184000) {	// 60 days
+      } else if (q->sub_expiration <= mynow + 5184000) {	// <= 60 days
          log_send(mainlog, LOG_NOTICE, "QRZ subscription expires within 60 days (%d days), you should consider renewing soon...", (mynow - q->sub_expiration) / 86400);
-      } else if (q->sub_expiration <= mynow + 2592000) {	// 30 days
+      } else if (q->sub_expiration <= mynow + 2592000) {	// <= 30 days
+         // XXX: this should pop up a dialog once per session to alert the user
          log_send(mainlog, LOG_CRIT, "QRZ subscription expires within 30 days (%d days), you really should renew soon...", (mynow - q->sub_expiration) / 86400);
+      } else if (q->sub_expiration <= mynow + 604800) {	// <= 7 days
+         // XXX: this should pop up a dialog once per session to alert the user
+         log_send(mainlog, LOG_CRIT, "QRZ subscription expires within 7 days (%d days), you really should renew soon...", (mynow - q->sub_expiration) / 86400);
       }
       if (!already_logged_in) {
          log_send(mainlog, LOG_INFO, "Logged into QRZ. Your subscription expires %s. You've used %d queries today.", datebuf, q->count);
@@ -315,8 +319,7 @@ bool qrz_start_session(void) {
 
    // send the request, once it completes, we should have all the data
    if (http_post(buf, NULL, outbuf, sizeof(outbuf)) != false) {
-// FORK!
-      log_send(mainlog, LOG_DEBUG, "sending %lu bytes <%s> to parser", strlen(outbuf), outbuf);
+//      log_send(mainlog, LOG_DEBUG, "sending %lu bytes to parser <%s>", strlen(outbuf), outbuf);
       qrz_parse_http_data(outbuf, NULL);
 
       // reset the failure counter...
@@ -355,6 +358,7 @@ bool qrz_lookup_callsign(const char *callsign) {
 
    if (http_post(buf, NULL, outbuf, sizeof(outbuf)) != false) {
       memset(outbuf, 0, 32769);
+      log_send(mainlog, LOG_DEBUG, "calldata: %p", calldata);
       qrz_parse_http_data(outbuf, calldata);
       log_send(mainlog, LOG_DEBUG, "calldata: %p", calldata);
    }

@@ -19,8 +19,9 @@
 #include <evutil.h>
 #include <termbox2.h>
 
+// BUG: These belong in a header...
 #define	MIN_HEIGHT	25
-#define	MIN_WIDTH	80
+#define	MIN_WIDTH	90
 
 char *progname = "ft8goblin";
 TextArea *msgbox = NULL;
@@ -243,7 +244,8 @@ static void print_input(void) {
 
 // Renders the data passed in a qrz_callsign_t to a dialog window
 void render_call_lookup(qrz_callsign_t *calldata) {
-   int x = (width / 2) + 1,
+   int default_x = (width / 2) + 1,
+       x = default_x,
        y = 2;
 
    if (calldata == NULL) {
@@ -255,8 +257,8 @@ void render_call_lookup(qrz_callsign_t *calldata) {
    // print callsign data
    int WIN_BORDER_FG = -1;
    int WIN_BORDER_BG = -1;
-   char padbuf[width/2];
-   size_t padlen = (width / 2) - 4;
+   size_t padlen = (width / 2) - 3;
+   char padbuf[padlen + 1];
    memset(padbuf, 0, padlen);
    for (size_t i = 0; i < padlen; i++) {
       padbuf[i] = '-';
@@ -276,7 +278,27 @@ void render_call_lookup(qrz_callsign_t *calldata) {
       calldata->latitude, calldata->longitude);
 
    printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Distance: 1102 mi, heading 293°");
-   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Lic. Class: General (Vanity)");
+   printf_tb(x, y, TB_WHITE|TB_BOLD, TB_BLACK, "Lic. Class: ");
+   x += 12;
+   if (calldata->opclass[0] == 'E') {
+      printf_tb(x, y, TB_WHITE|TB_BOLD, TB_BLACK, "Extra");
+   } else if (calldata->opclass[0] == 'G') {
+      printf_tb(x, y, TB_WHITE|TB_BOLD, TB_BLACK, "General");
+   } else if (calldata->opclass[0] == 'A') {
+      printf_tb(x, y, TB_WHITE|TB_BOLD, TB_BLACK, "Advanced");
+   } else if (calldata->opclass[0] == 'T') {
+      printf_tb(x, y, TB_WHITE|TB_BOLD, TB_BLACK, "Technician");
+   } else if (calldata->opclass[0] == 'N') {
+      printf_tb(x, y, TB_WHITE|TB_BOLD, TB_BLACK, "Novice");
+   } else {
+      log_send(mainlog, LOG_DEBUG, "render_call_lookup: can't grok operator class <%s> for %s", calldata->opclass, calldata->callsign);
+   }
+
+   if (strchr(calldata->codes, 'V') != NULL) {
+      printf_tb(x, y, TB_WHITE|TB_BOLD, TB_BLACK, " (Vanity)");
+   }
+      
+   y++; x = default_x + 1;;
    printf_tb(x, y++, TB_RED|TB_BOLD, TB_BLACK, "Prev. Calls: %s", calldata->previous_call);
    // XXX: Add days til expires?
 
@@ -290,7 +312,7 @@ void render_call_lookup(qrz_callsign_t *calldata) {
       exit(255);
    }
 
-   if (strftime(datebuf_eff, 128, "%Y/%m/%d %H:%M:%S", tm) == 0 && errno != 0) {
+   if (strftime(datebuf_eff, 128, "%Y/%m/%d", tm) == 0 && errno != 0) {
       log_send(mainlog, LOG_CRIT, "strftime() failed");
       exit(254);
    }
@@ -300,7 +322,7 @@ void render_call_lookup(qrz_callsign_t *calldata) {
       exit(255);
    }
 
-   if (strftime(datebuf_exp, 128, "%Y/%m/%d %H:%M:%S", tm) == 0 && errno != 0) {
+   if (strftime(datebuf_exp, 128, "%Y/%m/%d", tm) == 0 && errno != 0) {
       log_send(mainlog, LOG_CRIT, "strftime() failed");
       exit(254);
    }
@@ -313,11 +335,7 @@ void render_call_lookup(qrz_callsign_t *calldata) {
       printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "ATTN: %s", calldata->address_attn);
    }
    printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "%s", calldata->address1);
-   if (calldata->address2[0] > 0) {
-      printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "%s", calldata->address2);
-   }
-
-   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Earth City, %s %s %s", calldata->state, calldata->zip, calldata->country);
+   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "%s, %s %s %s", calldata->address2, calldata->state, calldata->zip, calldata->country);
    printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Email: %s", calldata->email);
 //   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Phone: %s", calldata->phone);
    if (calldata->url[0] > 0) {
@@ -329,6 +347,56 @@ void render_call_lookup(qrz_callsign_t *calldata) {
 
    x -= 1;
    printf_tb(x, height - 3, WIN_BORDER_FG, WIN_BORDER_BG, "└%s┘", padbuf);
+}
+
+char *pad_db(char *buf, size_t buf_len, int db, int digits) {
+   int mydigits = 0;
+   bool negative = false;
+
+   if (buf == NULL || buf_len <= 0) {
+      log_send(mainlog, LOG_DEBUG, "pad_db: buf <%p> or buf_len <%lu> invalid!", buf, buf_len);
+      return NULL;
+   }
+
+   memset(buf, 0, buf_len);
+
+   if (digits > 0) {
+      // real world, +100dBm is 10 megawatts :o
+      if (db > 99) {			// 100+
+         mydigits = 3;
+      } else if (db > 9) {		// 10-99
+         mydigits = 2;
+      } else if (db <= 9 && db >= 0) {	// 0-9
+         mydigits = 1;
+      } else if (db < -99) {		// -100+
+         mydigits = 3;
+      } else if (db < -9) {		// -10 - -99
+         mydigits = 2;
+      } else {				// -1 - -9
+         mydigits = 1;
+      }
+
+      if (db < 0) {
+         negative = true;
+      }
+
+      // truncate to digits max length
+      if (mydigits > digits) {
+         mydigits = digits;
+      }
+
+      size_t padlen = mydigits + 1 /* sign */ + 1 /* NULL */;
+      char pad[padlen];
+      memset(pad, 0, padlen);
+      int mypad = (digits - mydigits) - 1;
+      log_send(mainlog, LOG_DEBUG, "mypad: %d, padlen: %lu, mydigits: %d, digits: %d", mypad, padlen, mydigits, digits);
+      if (negative) {
+         //
+      }
+   } else {
+      return NULL;
+   }
+   return buf;
 }
 
 // XXX: temporary thing for our mockup...
@@ -348,8 +416,8 @@ void draw_fake_ta(void) {
    // print callsign data
    int WIN_BORDER_FG = -1;
    int WIN_BORDER_BG = -1;
-   char padbuf[width/2];
-   size_t padlen = (width / 2) - 4;
+   size_t padlen = (width / 2) - 3;
+   char padbuf[padlen + 1];
    memset(padbuf, 0, padlen);
 
    for (size_t i = 0; i < padlen; i++) {
@@ -365,7 +433,6 @@ void draw_fake_ta(void) {
    }
    printf_tb(x, y++, WIN_BORDER_FG, WIN_BORDER_BG, "┌%s┐", padbuf);
    x += 1;
-
 
    printf_tb(x, y, TB_WHITE, TB_BLACK, "%s", datebuf);
    printf_tb(x + strlen(datebuf) + 1, y++, TB_BLACK|TB_BOLD, TB_YELLOW, "[ft8-40m-1]  TX CQ N0CALL AA12 +1200");
@@ -384,8 +451,9 @@ void draw_fake_ta(void) {
    snprintf(buf, 512, "[ft8-40m-1]  +6 N0CALL AA1AB EM32 +320");
    printf_tb(x, y, TB_WHITE|TB_BOLD, TB_RED, "%s", buf);
    x += strlen(buf);
-   printf_tb(x, y++, TB_BLACK, TB_RED, " *QSO*");
+   printf_tb(x, y++, TB_CYAN|TB_BOLD, TB_RED, "***");
 
+   // new line
    x = 1;
    printf_tb(x, y, TB_WHITE, TB_BLACK, "%s", datebuf);
    x += strlen(datebuf) + 1;
@@ -409,10 +477,14 @@ void draw_fake_ta(void) {
       snprintf(fake_q->previous_call, MAX_CALLSIGN, "N0FUX");
       snprintf(fake_q->first_name, sizeof(fake_q->first_name), "Robert");
       snprintf(fake_q->last_name, sizeof(fake_q->last_name), "Test");
-      snprintf(fake_q->address1, sizeof(fake_q->address1), "123 Seasame St");
+      snprintf(fake_q->address1, sizeof(fake_q->address1), "123 Sesame St");
+      snprintf(fake_q->address2, sizeof(fake_q->address2), "Earth City");
       snprintf(fake_q->state, sizeof(fake_q->state), "MO");
+      snprintf(fake_q->zip, sizeof(fake_q->zip), "63045");
       snprintf(fake_q->country, sizeof(fake_q->country), "USA");
       snprintf(fake_q->email, sizeof(fake_q->email), "bob@test.com");
+      snprintf(fake_q->opclass, sizeof(fake_q->opclass), "G");
+      snprintf(fake_q->codes, sizeof(fake_q->opclass), "HVIE");
 //      snprintf(fake_q->phone, sizeof(fake_q->phone), "987-654-3210");
 //      fake_q->country_code = 
       fake_q->latitude = 32.021;

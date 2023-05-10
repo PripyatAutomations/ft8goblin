@@ -23,7 +23,7 @@ void ta_redraw(TextArea *ta) {
       log_send(mainlog, LOG_CRIT, "ta_redraw: ta (%p) -> scrollback == NULL", ta);
       return;
    }
-
+#if	0
    ////////////////////////////////////
    // Find the end of the ringbuffer //
    ////////////////////////////////////
@@ -88,6 +88,7 @@ void ta_redraw(TextArea *ta) {
       printf_tb(offset, i, TB_DEFAULT, TB_DEFAULT, "%s", latest_rn->data);
    }
    tb_present();
+#endif
 }
 
 void ta_resize(TextArea *ta) {
@@ -178,7 +179,7 @@ TextArea *ta_init(const char *name, int scrollback_lines) {
       log_send(mainlog, LOG_CRIT, "ta_init: refusing to create TextArea with no scrollback as this can't hold text!");
       return NULL;
    }
-   ta->scrollback = rb_create(ta->scrollback_lines, "TextArea scrollback");
+   ta->scrollback = rb_create(ta->scrollback_lines, name);
 
    // add to end of ta_textareas array
    for (int i = 0; i < MAX_TEXTAREAS; i++) {
