@@ -315,7 +315,8 @@ bool qrz_start_session(void) {
 
    // send the request, once it completes, we should have all the data
    if (http_post(buf, NULL, outbuf, sizeof(outbuf)) != false) {
-//      log_send(mainlog, LOG_DEBUG, "sending %lu bytes <%s> to parser", strlen(outbuf), outbuf);
+// FORK!
+      log_send(mainlog, LOG_DEBUG, "sending %lu bytes <%s> to parser", strlen(outbuf), outbuf);
       qrz_parse_http_data(outbuf, NULL);
 
       // reset the failure counter...

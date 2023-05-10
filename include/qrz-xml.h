@@ -29,12 +29,19 @@ extern "C" {
       time_t	sub_expiration;	// when does my subscription end?
       time_t	last_rx;	// timestamp of last valid reply
       char	my_callsign[MAX_CALLSIGN]; // my callsign
-      char		*last_msg;	// pointer to last informational message (must be free()d and NULLed!)
-      char		*last_error;	// point to last error message (must be freed() and NULLed!)
+      char	*last_msg;	// pointer to last informational message (must be free()d and NULLed!)
+      char	*last_error;	// point to last error message (must be freed() and NULLed!)
    } qrz_session_t;
 
+   typedef enum callsign_datasrc {
+      DATASRC_NONE = 0,
+      DATASRC_ULS,
+      DATASRC_QRZ
+   } callsign_datasrc_t;
+
    typedef struct qrz_callsign {
-      int	cached;			// did this result come from cache?
+      callsign_datasrc_t origin;			// origin of the data
+      int		cached;				// did this result come from cache?
       char		callsign[MAX_CALLSIGN];		// callsign
       char		query_callsign[MAX_CALLSIGN];	// queried callsign (the one sent in the request)
       char		*aliases[MAX_QRZ_ALIASES];	// array of alternate callsigns, these MUST be free()d

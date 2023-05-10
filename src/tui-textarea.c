@@ -157,13 +157,17 @@ void ta_destroy(TextArea *ta) {
    free(ta);
 }
 
-TextArea *ta_init(int scrollback_lines) {
+TextArea *ta_init(const char *name, int scrollback_lines) {
    TextArea *ta = NULL;
 
    if ((ta = malloc(sizeof(TextArea))) == NULL) {
       fprintf(stderr, "ta_init: out of memory!\n");
       exit(ENOMEM);
    }
+   memset(ta, 0, sizeof(TextArea));
+
+   // save the name
+   strncpy(ta->name, name, 64);
 
    /////////////////////////////////
    // Setup the scrollback buffer //

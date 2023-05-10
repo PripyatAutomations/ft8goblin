@@ -255,8 +255,8 @@ void render_call_lookup(qrz_callsign_t *calldata) {
    // print callsign data
    int WIN_BORDER_FG = -1;
    int WIN_BORDER_BG = -1;
-   char padbuf[256];
-   size_t padlen = (width / 2) - 3;
+   char padbuf[width/2];
+   size_t padlen = (width / 2) - 4;
    memset(padbuf, 0, padlen);
    for (size_t i = 0; i < padlen; i++) {
       padbuf[i] = '-';
@@ -280,21 +280,58 @@ void render_call_lookup(qrz_callsign_t *calldata) {
    printf_tb(x, y++, TB_RED|TB_BOLD, TB_BLACK, "Prev. Calls: %s", calldata->previous_call);
    // XXX: Add days til expires?
 
-   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Expires: 2028/03/01");
+
+   char datebuf_eff[128], datebuf_exp[128];
+   struct tm *tm;
+   memset(datebuf_eff, 0, 128);
+   memset(datebuf_exp, 0, 128);
+   if ((tm = localtime(&calldata->license_effective)) == NULL) {
+      log_send(mainlog, LOG_CRIT, "localtime() failed");
+      exit(255);
+   }
+
+   if (strftime(datebuf_eff, 128, "%Y/%m/%d %H:%M:%S", tm) == 0 && errno != 0) {
+      log_send(mainlog, LOG_CRIT, "strftime() failed");
+      exit(254);
+   }
+
+   if ((tm = localtime(&calldata->license_expiry)) == NULL) {
+      log_send(mainlog, LOG_CRIT, "localtime() failed");
+      exit(255);
+   }
+
+   if (strftime(datebuf_exp, 128, "%Y/%m/%d %H:%M:%S", tm) == 0 && errno != 0) {
+      log_send(mainlog, LOG_CRIT, "strftime() failed");
+      exit(254);
+   }
+   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Effective: %s, Expires: %s", datebuf_eff, datebuf_exp);
    printf_tb(x, y++, TB_YELLOW|TB_BOLD, TB_BLACK, "Logbook QSOs: 3 (2 bands)");
    // skip a line
    y++;
-   printf_tb(x, y++, TB_GREEN|TB_BOLD, TB_BLACK, "Robert Test");
-   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "123 Sesame St");
-   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Earth City, MO 64153 USA");
-   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Email: bobtest@test.com");
-   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Phone: 987-654-3210");
-   printf_tb(x, y++, TB_WHITE, TB_BLACK, "URL: https://qrz.com/db/AA1AB");
-   printf_tb(x, y++, TB_MAGENTA, TB_BLACK, "Data sourced from QRZ (11 hours old)");
+   printf_tb(x, y++, TB_GREEN|TB_BOLD, TB_BLACK, "%s %s", calldata->first_name, calldata->last_name);
+   if (calldata->address_attn > 0) {
+      printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "ATTN: %s", calldata->address_attn);
+   }
+   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "%s", calldata->address1);
+   if (calldata->address2[0] > 0) {
+      printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "%s", calldata->address2);
+   }
+
+   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Earth City, %s %s %s", calldata->state, calldata->zip, calldata->country);
+   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Email: %s", calldata->email);
+//   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Phone: %s", calldata->phone);
+   if (calldata->url[0] > 0) {
+      printf_tb(x, y++, TB_WHITE, TB_BLACK, "URL: %s", calldata->url);
+   }
+   if (calldata->origin == DATASRC_QRZ) {
+      printf_tb(x, y++, TB_MAGENTA, TB_BLACK, "Data sourced from QRZ (11 hours old)");
+   }
+
    x -= 1;
    printf_tb(x, height - 3, WIN_BORDER_FG, WIN_BORDER_BG, "└%s┘", padbuf);
 }
 
+// XXX: temporary thing for our mockup...
 qrz_callsign_t *fake_q;
 
 void draw_fake_ta(void) {
@@ -312,7 +349,7 @@ void draw_fake_ta(void) {
    int WIN_BORDER_FG = -1;
    int WIN_BORDER_BG = -1;
    char padbuf[width/2];
-   size_t padlen = (width / 2) - 1;
+   size_t padlen = (width / 2) - 4;
    memset(padbuf, 0, padlen);
 
    for (size_t i = 0; i < padlen; i++) {
@@ -370,8 +407,20 @@ void draw_fake_ta(void) {
       snprintf(fake_q->dxcc, sizeof(fake_q->dxcc), "291");
       snprintf(fake_q->grid, MAX_GRID_LEN, "EM32");
       snprintf(fake_q->previous_call, MAX_CALLSIGN, "N0FUX");
+      snprintf(fake_q->first_name, sizeof(fake_q->first_name), "Robert");
+      snprintf(fake_q->last_name, sizeof(fake_q->last_name), "Test");
+      snprintf(fake_q->address1, sizeof(fake_q->address1), "123 Seasame St");
+      snprintf(fake_q->state, sizeof(fake_q->state), "MO");
+      snprintf(fake_q->country, sizeof(fake_q->country), "USA");
+      snprintf(fake_q->email, sizeof(fake_q->email), "bob@test.com");
+//      snprintf(fake_q->phone, sizeof(fake_q->phone), "987-654-3210");
+//      fake_q->country_code = 
       fake_q->latitude = 32.021;
       fake_q->longitude = -93.792;
+      fake_q->license_expiry = 1835585999;
+      fake_q->license_effective = 1519880400;
+      fake_q->origin = DATASRC_QRZ;
+      snprintf(fake_q->url, sizeof(fake_q->url), "https://qrz.com/db/AA1AB");
 
       // this is first callsign looked up by us, prepare the RingBuffer!
       if (callsign_lookup_history == NULL) {
@@ -395,6 +444,7 @@ void draw_fake_ta(void) {
 
 void redraw_screen(void) {
    tb_clear();
+
    if (height >= MIN_HEIGHT && width >= MIN_WIDTH) {
       // Show help (keys)
       print_help();
@@ -437,7 +487,7 @@ int main(int argc, char **argv) {
 
    tui_init();
    // create the default TextArea for messages
-   msgbox = ta_init(cfg_get_int(cfg, "ui/scrollback-lines"));
+   msgbox = ta_init("msgbox", cfg_get_int(cfg, "ui/scrollback-lines"));
    tui_resize_window(NULL);
    tui_io_watcher_init();
    ta_printf(msgbox, "$CYAN$Welcome to ft8goblin, a console ft8 client with support for multiple bands!");

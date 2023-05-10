@@ -13,11 +13,14 @@ How to use it?
 --------------
 Copy config.json.exmaple to config.json and edit it...
 Ex:
-	cp config.json{.example,}
+	cp config{.example,}.json
 	joe config.json
 
 Start the mess:
 	./startup
+
+Or with gdb:
+	./startup -g
 
 In theory, the client will keep the ft8 decoders/etc running, check the logs
 (ft8decoder.$band.log)

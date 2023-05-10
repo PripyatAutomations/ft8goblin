@@ -18,9 +18,10 @@ extern "C" {
       int 	top,			// top of scrollable TextArea
                 bottom;			// bottom of scrollable TextArea
       int	x_offset;		// offset from left edge
+      char	name[65];		// a descriptive name of the textarea
    } TextArea;
    // Handling of the TextArea (roughly in order of lifecycle)
-   TextArea *ta_init(int scrollback_lines);
+   extern TextArea *ta_init(const char *name, int scrollback_lines);
    extern int ta_append(TextArea *ta, const char *buf);
    extern void ta_printf(TextArea *ta, const char *fmt, ...);
    extern void ta_redraw(TextArea *ta);
@@ -28,9 +29,8 @@ extern "C" {
    extern void ta_redraw_all(void);
    extern void ta_resize_all(void);
    extern void ta_destroy(TextArea *ta);
+   extern int scrollback_lines;
 
-   ///
-   extern int scrollback_lines;	// this is set in main below...
 #ifdef __cplusplus
 };
 #endif

@@ -27,7 +27,7 @@ make -j${NPROC} termbox2 world || exit 1
 
 # Start ft8goblin, if build was successful
 if [ "${use_gdb}" == "y" ]; then
-   gdb ./bin/ft8goblin
+   gdb -e .gdbscript ./bin/ft8goblin
 else
    ./bin/ft8goblin
 fi

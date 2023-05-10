@@ -47,7 +47,10 @@
       "cache-db": "etc/callsign-cache.db",
       "cache-online-lookups": "true",
       "cache-expiry": "3d",
-      "cache-keep-stale-if-offline": "true"
+      "cache-keep-stale-if-offline": "true",
+      "use-lotw-activity": "false",
+      "lotw-url": "https://lotw.arrl.org/lotw-user-activity.csv",
+      "lotw-activity-download": "24h"
    },
    "gnis-lookup": {
       "gnis-db": "gnis.db",
