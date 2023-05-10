@@ -9,7 +9,10 @@ extern "C" {
 #endif
    // make a keymap out of these? ;)
    typedef struct Keymap {
-      struct tb_event *evt;
+      uint8_t type;
+      uint8_t mod;
+      uint16_t key;
+      uint32_t ch;
       void (*callback)();
    } Keymap;
 

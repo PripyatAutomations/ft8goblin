@@ -1,4 +1,4 @@
-VERSION = 20230506.02
+VERSION = 20230509
 all: world
 bins := ft8goblin decoderd-ft8 encoderd-ft8 sigcapd callsign-lookupd flac-streamerd
 

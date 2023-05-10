@@ -34,19 +34,37 @@ void process_input(struct tb_event *evt) {
          }
       } else if (evt->key == TB_KEY_TAB) {
         if (menu_level == 0) {		// only apply in main screen
-           if (active_pane == 0)
-              active_pane = 1;
-           else
+           if (active_pane < 2) {
+              active_pane++;
+           } else if (active_pane == 2) {
               active_pane = 0;
+           }
         }
+        redraw_screen();
       } else if (evt->key == TB_KEY_ARROW_LEFT) { 		// left cursor
+         if (evt->mod == TB_MOD_CTRL) {
+            log_send(mainlog, LOG_WARNING, "got theme_prev: Only theme available: default");
+            // XXX: Go back a theme
+         }
       } else if (evt->key == TB_KEY_ARROW_RIGHT) {		// right cursor
+         if (evt->mod == TB_MOD_CTRL) {
+            log_send(mainlog, LOG_WARNING, "got theme_next: Only theme available: default");
+            // XXX: Go forward a theme
+         }
       } else if (evt->key == TB_KEY_ARROW_UP) {			// up cursor
       } else if (evt->key == TB_KEY_ARROW_DOWN) {		// down cursor
       } else if (evt->key == TB_KEY_CTRL_B) {			// ^B
          if (menu_level == 0) {					// only if we're at main TUI screen (not in a menu)
             menu_show(&menu_bands, 0);
          }
+      } else if (evt->key == TB_KEY_CTRL_C) {			// ^C
+         if (cq_only == false) {
+            cq_only = true;
+         } else {
+            cq_only = false;
+         }
+         redraw_screen();
+         log_send(mainlog, LOG_INFO, "Toggled CQ Only to %s", (cq_only ? "On" : "Off"));
       } else if (evt->key == TB_KEY_CTRL_E) {			// ^E
          // toggle TX Even/Odd
          if (tx_even == false) {
@@ -115,6 +133,7 @@ static void termbox_cb(EV_P_ ev_io *w, int revents) {
 static void periodic_cb(EV_P_ ev_timer *w, int revents) {
    now = time(NULL);
    subproc_check_all();
+
    redraw_screen();
 }
 

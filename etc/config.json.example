@@ -59,6 +59,7 @@
    },
    "ui": {
       "color": "true",
+      "theme": "default",
       "autoscroll": "true",
       "scrollback-lines": 300,
       "alerts": {

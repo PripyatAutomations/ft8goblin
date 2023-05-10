@@ -11,7 +11,13 @@
 #include "tui-textarea.h"
 
 #define	MAX_TEXTAREAS	6
-
+// ╔  ╗ ╚ ╝ ╦ ╩ ║ ╣ ╠ ═
+#define	_TA_TOPLEFT	0xc9 	// 201 ╔
+#define	_TA_TOPRIGHT	0xbb	// 187 ╗
+#define	_TA_BOTLEFT	0xc8	// 200 ╚
+#define	_TA_BOTRIGHT	0xbc	// 188 ╝
+#define	_TA_HORIZ	0xcd	// 205 ═
+#define	_TA_VERT	0xba	// 186 ║
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -24,7 +30,6 @@ extern "C" {
    // Print *anywhere* on the screen (dont try to print on the TextAreas ;)
    extern void print_tb(const char *str, int x, int y, uint16_t fg, uint16_t bg);
    extern void printf_tb(int x, int y, uint16_t fg, uint16_t bg, const char *fmt, ...);
-
 
    // Returns: index of button pressed. (Buttons are 0 = OK, 1 = CANCEL, 2 = OK|CANCEL, 3 = OK|CANCEL|HELP)
    extern int modal_dialog(int buttons, int border_fg, int border_bg, int title_fg, int title_bg, const char *title, int text_fg, int text_bg, const char *fmt, ...);
@@ -48,6 +53,7 @@ extern "C" {
    extern int dying;			// Are we shutting down?
    extern int tx_enabled;		// Master toggle to TX mode.
    extern bool tx_even;			// TX even or odd time slot?
+   extern bool cq_only;			// only show CQ + active QSOs?
 #ifdef __cplusplus
 };
 #endif

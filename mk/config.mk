@@ -17,7 +17,7 @@ sigcapd_libs += uhd rtlsdr uhd rtlsdr hamlib
 callsign_lookupd_libs := m curl
 
 ERROR_FLAGS := -Werror 
-SAN_FLAGS := -fsanitize=address
+#SAN_FLAGS := -fsanitize=address
 WARN_FLAGS := -Wall -pedantic -Wno-unused-variable -Wno-unused-function #-Wno-missing-braces
 OPT_FLAGS := -O2 -ggdb3
 C_STD := -std=gnu11
@@ -26,7 +26,7 @@ CFLAGS += ${C_STD} -I./ext/ -I./include/ -I./ext/ft8_lib/ -fPIC
 CFLAGS += ${SAN_FLAGS} ${WARN_FLAGS} ${ERROR_FLAGS} ${OPT_FLAGS}
 CFLAGS += -DVERSION="\"${VERSION}\""
 CXXFLAGS := ${CXX_STD} $(filter-out ${C_STD},${CFLAGS})
-LDFLAGS += -L./lib/ -fsanitize=address
+LDFLAGS += -L./lib/ ${SAN_FLAGS}
 LDFLAGS += $(foreach x,${common_libs},-l${x})
 ft8lib_cflags := -fPIC
 ft8goblin_ldflags := ${LDFLAGS} $(foreach x,${ft8goblin_libs},-l${x})

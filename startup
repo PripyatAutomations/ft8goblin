@@ -7,20 +7,25 @@
 # Set a reasonable default for even ten year old machines...
 [ -z "${NPROC}" ] && NPROC=8
 
-if [ ! -x bin/ft8goblin ]; then
-   echo "Hang on, we need to compile things... This should only take a moment."
-   make clean
-   make -j${NPROC} world
-fi
-
-# Add ./lib to the library search path
-export LD_LIBRARY_PATH=./lib:${LD_LIBRARY_PATH}
-
-# Start ft8goblin
 if [ "$1" == "-g" ]; then
    use_gdb=y
 fi
 
+
+# Add ./lib to the library search path
+export LD_LIBRARY_PATH=./lib:${LD_LIBRARY_PATH}
+
+reset
+rm -f logs/*.log
+
+# XXX: should we add a cmdline option to git pull?
+
+# rebuild things or exit if failure
+echo "Hang on, we need to compile things... This should only take a moment."
+#make clean || exit 2
+make -j${NPROC} termbox2 world || exit 1
+
+# Start ft8goblin, if build was successful
 if [ "${use_gdb}" == "y" ]; then
    gdb ./bin/ft8goblin
 else

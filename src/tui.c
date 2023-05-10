@@ -98,6 +98,7 @@ ColorPair parse_color_str(const char *str) {
 }
 
 void tui_resize_window(struct tb_event *evt) {
+   // if we got passed an event, use it's data, otherwise query termbox2 for height/width of screen
    if (evt == NULL) {
       height = tb_height();
       width = tb_width();
@@ -106,21 +107,20 @@ void tui_resize_window(struct tb_event *evt) {
       width = evt->w;
    }
 
-   if (width < 80 || height < 20) {
+   if (width < 90 || height < 25) {
       tb_clear();
       tb_present();
-      fprintf(stderr, "[display] Your terminal has a size of %dx%d, this is too small! I cannot continue...\n", width, height);
       log_send(mainlog, LOG_CRIT, "Your terminal has a size of %dx%d, this is too small! I cannot continue...", width, height);
       ta_printf(msgbox, "$RED$Your terminal has a size of %dx%d, this is too small! I cannot continue...\n", width, height);
       tb_present();
       return;
    } else {
       log_send(mainlog, LOG_NOTICE, "display resolution %dx%d is acceptable!", width, height);
+      ta_resize_all();
+      redraw_screen();
    }
    line_status = height - 1;
    line_input = height - 2;
-   ta_resize_all();
-   redraw_screen();
 }
 
 void tui_shutdown(void) {
@@ -143,6 +143,10 @@ void tui_shutdown(void) {
 
 void tui_init(void) {
    tb_init();
+   tb_set_input_mode(TB_INPUT_ESC | TB_EVENT_MOUSE);
+   // we should look at this again when we get configurable color schemes going
+   // 256 or 216?
+//   tb_set_output_mode(TB_OUTPUT_256);
 }
 
 //////////

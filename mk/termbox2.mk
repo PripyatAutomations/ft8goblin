@@ -3,6 +3,8 @@
 ################################
 termbox2 := lib/libtermbox2.so
 
+termbox2: ${termbox2}
+
 lib/libtermbox2.so.${termbox_lib_ver}: ext/termbox2/libtermbox2.so.${termbox_lib_ver}
 	@echo "[CP] $@ lib/"
 	@install -m 0755 $^ lib/

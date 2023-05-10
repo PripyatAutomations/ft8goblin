@@ -110,8 +110,8 @@ int ta_append(TextArea *ta, const char *buf) {
    // set needs_freed to ensure it gets freed automatically...
    rb_add(ta->scrollback, bp, true);
 
-   // XXX: temporarily send TextArea messages to log (yuck!)
-   log_send(mainlog, LOG_DEBUG, "%s", buf);
+   // XXX: temporarily send TextArea messages to log until TextArea finished
+   log_send(mainlog, LOG_DEBUG, "<TextArea:%s> %s", ta->name, buf);
    return rv;
 }
 

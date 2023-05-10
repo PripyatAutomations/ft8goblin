@@ -1,6 +1,8 @@
 These are not in any particular order, but stuff near the bottom is probably far off...
 ------
 * Make sure that things in common_objs aren't calling termbox or tuilib bits
+  - or just be make sure they're smart enough to check if termbox is active
+    and if not use log_send() ;)
 * Finish TextArea implementation
 * Finish InputBox implementation
 * Work on database logging

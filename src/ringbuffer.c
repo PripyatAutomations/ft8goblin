@@ -27,6 +27,9 @@ rb_buffer_t *rb_create(int max_size, const char *name) {
    strncpy(buffer_name, name, name_len);
    buffer_name[name_len - 1] = '\0'; // make sure name is null-terminated
    buffer->name = buffer_name;
+
+   log_send(mainlog, LOG_DEBUG, "rb_create created new RingBuffer %s at %p", buffer->name, buffer);
+
    return buffer;
 }
 
@@ -35,7 +38,7 @@ void rb_destroy(rb_buffer_t *buffer) {
 
    while (current != NULL) {
       rb_node_t *next = current->next;
-      log_send(mainlog, LOG_DEBUG, "rb: Destroying entry rb:%p to %p, needs_freed: %d", current, current->data, current->needs_freed);
+      log_send(mainlog, LOG_DEBUG, "rb: Destroying entry rb:%p (%s) to %p, needs_freed: %d", current, buffer->name, current->data, current->needs_freed);
 
       if (current->needs_freed && current->data != NULL)
          free(current->data);
@@ -61,7 +64,7 @@ int rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
    node->next = NULL;
    node->needs_freed = needs_freed;
 
-   log_send(mainlog, LOG_DEBUG, "Adding entry %p to rb:%p, needs_freed: %d", data, buffer, needs_freed);
+   log_send(mainlog, LOG_DEBUG, "Adding entry %p to rb:%p (%s), needs_freed: %d", data, buffer, buffer->name, needs_freed);
 
    if (buffer->current_size == 0) {
        buffer->head = node;
