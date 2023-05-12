@@ -20,21 +20,17 @@ extern "C" {
       void (*callback)();
    } Keymap;
 
-   extern void process_input(struct tb_event *evt);
+   extern void tui_process_input(struct tb_event *evt);
    extern int tui_io_watcher_init(void);
+   extern void tui_show_input(void);
    extern void tui_input_init(void);
    extern void tui_input_shutdown(void);
    extern struct ev_loop *loop;
    extern time_t now;
-   extern const size_t input_buf_sz;
-   extern size_t input_buf_offset;
-   extern size_t input_buf_cursor;
-   extern char input_buf[TUI_INPUT_BUFSZ];
-   ///// ft8goblin.c
-   extern const char *mycall;      // cfg:ui/mycall
-   extern const char *gridsquare;  // cfg:ui/gridsquare
-   extern bool auto_cycle;
-
+//   extern const size_t input_buf_sz;
+//   extern size_t input_buf_offset;
+//   extern size_t input_buf_cursor;
+//   extern char input_buf[TUI_INPUT_BUFSZ];
 #ifdef __cplusplus
 };
 #endif

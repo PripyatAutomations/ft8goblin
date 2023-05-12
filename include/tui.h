@@ -11,13 +11,7 @@
 #include "tui-textarea.h"
 
 #define	MAX_TEXTAREAS	6
-// ╔  ╗ ╚ ╝ ╦ ╩ ║ ╣ ╠ ═
-#define	_TA_TOPLEFT	0xc9 	// 201 ╔
-#define	_TA_TOPRIGHT	0xbb	// 187 ╗
-#define	_TA_BOTLEFT	0xc8	// 200 ╚
-#define	_TA_BOTRIGHT	0xbc	// 188 ╝
-#define	_TA_HORIZ	0xcd	// 205 ═
-#define	_TA_VERT	0xba	// 186 ║
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -37,23 +31,15 @@ extern "C" {
    // ui functions
    extern void tui_init(void);
    extern void tui_resize_window(struct tb_event *evt);
-   extern void redraw_screen(void);
    extern void tui_shutdown(void);
 
-   /////
+   // This comes from the user program
+   extern void redraw_screen(void);
    extern int active_band;		// Which band are we TXing on?
    extern int active_pane;		// active pane (0: TextArea, 1: TX input)
    extern int height, width;
    extern int line_status;		// status line
    extern int line_input;		// input field
-
-   // These need to move elsewhere...
-   extern void halt_tx_now(void);
-   extern int view_config(void);
-   extern int dying;			// Are we shutting down?
-   extern int tx_enabled;		// Master toggle to TX mode.
-   extern bool tx_even;			// TX even or odd time slot?
-   extern bool cq_only;			// only show CQ + active QSOs?
 #ifdef __cplusplus
 };
 #endif

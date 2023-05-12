@@ -49,7 +49,7 @@ void rb_destroy(rb_buffer_t *buffer) {
    free(buffer);
 }
 
-int rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
+rb_node_t *rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
    struct timespec timestamp;
    clock_gettime(CLOCK_MONOTONIC, &timestamp);
 
@@ -70,7 +70,7 @@ int rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
        buffer->head = node;
        buffer->tail = node;
        buffer->current_size++;
-       return 0;
+       return NULL;
    }
    if (buffer->current_size == buffer->max_size) {
        rb_node_t *next_head = buffer->head->next;
@@ -85,7 +85,7 @@ int rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
    // we are now the tail of the list
    buffer->tail = node;
    buffer->current_size++;
-   return 0;
+   return node;
 }
 
 rb_node_t *rb_get_most_recent(rb_buffer_t *buffer) {

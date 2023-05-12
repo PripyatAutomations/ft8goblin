@@ -22,7 +22,7 @@ extern "C" {
 
    extern rb_buffer_t* rb_create(int max_size, const char *name);
    extern void rb_destroy(rb_buffer_t* buffer);
-   extern int rb_add(rb_buffer_t* buffer, void* data, int needs_freed);
+   extern rb_node_t *rb_add(rb_buffer_t* buffer, void* data, int needs_freed);
    extern rb_node_t *rb_get_most_recent(rb_buffer_t* buffer);
    extern void **rb_get_range(rb_buffer_t* buffer, int start, int count);
 #ifdef __cplusplus

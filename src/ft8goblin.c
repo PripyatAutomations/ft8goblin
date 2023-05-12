@@ -38,7 +38,7 @@ bool	tx_even = false;		// TX even or odd cycle?
 bool	cq_only = false;		// Only show CQ & active QSOs?
 int	active_pane = 0;		// active pane (0: TextArea, 1: TX input)
 bool	auto_cycle = true;		// automatically switch to next message on RXing a response
-
+tx_mode_t tx_mode = TX_MODE_NONE;	// mode
 rb_buffer_t *callsign_lookup_history = NULL;
 size_t callsign_lookup_history_sz = 1;
 
@@ -82,7 +82,7 @@ static void print_help(void) {
    printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Toggle TX ");
    offset += 10;
 
-   printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "^E ");
+   printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "^P ");
    offset += 3;
    printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Even/Odd");
    offset = 7;
@@ -117,10 +117,15 @@ static void print_help(void) {
    printf_tb(offset, 1, TB_MAGENTA|TB_BOLD, 0, "Settings ");
    offset += 9;
 
-   printf_tb(offset, 1, TB_RED|TB_BOLD, 0, "^A ");
+   printf_tb(offset, 1, TB_RED|TB_BOLD, 0, "^Y ");
    offset += 3;
    printf_tb(offset, 1, TB_MAGENTA|TB_BOLD, 0, "Auto ");
    offset += 5;
+
+   printf_tb(offset, 1, TB_RED|TB_BOLD, 0, "^O ");
+   offset += 3;
+   printf_tb(offset, 1, TB_MAGENTA|TB_BOLD, 0, "TXMode ");
+   offset += 6;
 }
 
 static void print_status(void) {
@@ -155,6 +160,20 @@ static void print_status(void) {
    offset += strlen(gridsquare);
    printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "] ");
    offset += 2;
+
+   // TX mode
+   const char *str = get_mode_name(tx_mode);
+
+   if (str != NULL) {
+      printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "[");
+      offset++;
+      printf_tb(offset, line_status, TB_CYAN, 0, "TX Mode:");
+      offset += 8;
+      printf_tb(offset, line_status, TB_YELLOW|TB_BOLD, 0, "%s", str);
+      offset += strlen(str);
+      printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "] ");
+      offset += 2;
+   }
 
    // only show CQ and active QSOs?
    printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "[");
@@ -253,18 +272,8 @@ static void print_status(void) {
    tb_present();
 }
 
-static void print_input(void) {
-   if (active_pane == PANE_INPUT) {
-      printf_tb(0, line_input, TB_GREEN|TB_BOLD, TB_BLACK, "> %s", input_buf);
-      tb_set_cursor(2 + input_buf_cursor, line_input);
-   } else {
-      printf_tb(0, line_input, TB_WHITE, TB_BLACK, "> %s", input_buf);
-      tb_hide_cursor();
-   }
-   tb_present();
-}
-
-// Renders the data passed in a qrz_callsign_t to a dialog window
+// XXX: Need to make this use of TextArea functions
+// Renders the data passed in a qrz_callsign_t to the callsign lookup 'window'
 void render_call_lookup(qrz_callsign_t *calldata) {
    int default_x = (width / 2) + 1,
        x = default_x,
@@ -304,14 +313,19 @@ void render_call_lookup(qrz_callsign_t *calldata) {
    x += 12;
    if (calldata->opclass[0] == 'E') {
       printf_tb(x, y, TB_WHITE|TB_BOLD, TB_BLACK, "Extra");
+      x += 5;
    } else if (calldata->opclass[0] == 'G') {
       printf_tb(x, y, TB_WHITE|TB_BOLD, TB_BLACK, "General");
+      x += 7;
    } else if (calldata->opclass[0] == 'A') {
       printf_tb(x, y, TB_WHITE|TB_BOLD, TB_BLACK, "Advanced");
+      x += 9;
    } else if (calldata->opclass[0] == 'T') {
       printf_tb(x, y, TB_WHITE|TB_BOLD, TB_BLACK, "Technician");
+      x += 10;
    } else if (calldata->opclass[0] == 'N') {
       printf_tb(x, y, TB_WHITE|TB_BOLD, TB_BLACK, "Novice");
+      x += 6;
    } else {
       log_send(mainlog, LOG_DEBUG, "render_call_lookup: can't grok operator class <%s> for %s", calldata->opclass, calldata->callsign);
    }
@@ -547,7 +561,7 @@ void redraw_screen(void) {
    //   ta_redraw_all();
       draw_fake_ta();
       // print the input prompt
-      print_input();
+      tui_show_input();
       // and the status line
       print_status();
    } else {
@@ -620,6 +634,37 @@ int main(int argc, char **argv) {
    mainlog = NULL;
    fini(0);			// remove pidfile, etc
    return 0;
+}
+
+/////////////////////////////////////////////
+// return a static string of the mode name //
+/////////////////////////////////////////////
+const char *mode_names[] = {
+   "OFF",
+   "FT8",
+   "FT4",
+//   "JS8",
+//   "PSK11",
+//   "ARDOP FEC",
+   NULL
+};
+const char *get_mode_name(tx_mode_t mode) {
+   if (mode <= TX_MODE_NONE || mode >= TX_MODE_END) {
+      return mode_names[0];
+   }
+   return mode_names[mode];
+}
+
+void toggle_tx_mode(void) {
+   if (tx_mode == TX_MODE_NONE || tx_mode == TX_MODE_END) {
+      tx_mode = TX_MODE_NONE + 1;
+   } else if (tx_mode < TX_MODE_END) {
+      tx_mode++;
+   }
+
+   // XXX: we should make a function to turn these to names...
+   log_send(mainlog, LOG_INFO, "Toggled TX mode to %s", get_mode_name(tx_mode));
+   redraw_screen();
 }
 
 ///////////
