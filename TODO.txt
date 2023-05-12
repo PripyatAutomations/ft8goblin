@@ -5,6 +5,9 @@ These are not in any particular order, but stuff near the bottom is probably far
     and if not use log_send() ;)
 * Finish TextArea implementation
 * Finish InputBox implementation
+* Finish KeyBindings mess, so we can clean up the tu-input code
+* Rework the key binding help to be derived from the active keymap, so it
+  updates keys available as you move around the program
 * Work on database logging
 * Finish QSO database
 * Complete ft8decoder using ft8lib for ft4 and ft8

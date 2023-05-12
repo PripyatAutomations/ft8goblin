@@ -4,6 +4,7 @@
 // XXX: We need to make keymaps a loadable thing, so each menu, pane, etc can select its own keymap
 // XXX: This would make things a lot more pleasant for everyone!
 // XXX: a lot of this code belongs in ft8goblin.c... someday it'll happen
+//
 #include "config.h"
 #include "debuglog.h"
 #include "tui.h"
@@ -11,11 +12,43 @@
 #include "subproc.h"
 #include "ft8goblin_types.h"
 #include <ev.h>
+#include <ctype.h>
 
 static ev_io termbox_watcher, termbox_resize_watcher;
 static ev_timer periodic_watcher;
 extern TextArea *msgbox;
 time_t now = 0;
+//////
+// These all are internal to tui-input and should probably end up static...
+const size_t input_buf_sz = TUI_INPUT_BUFSZ;		// really this is excessive even...
+size_t input_buf_offset = 0, input_buf_cursor = 0, input_scrollback_lines = 0;
+char input_buf[TUI_INPUT_BUFSZ];
+rb_buffer_t *input_buf_history = NULL;
+
+static void tui_insert_char(char c) {
+   if (input_buf_cursor < input_buf_sz - 1) {
+      memmove(&input_buf[input_buf_cursor + 1], &input_buf[input_buf_cursor], strlen(&input_buf[input_buf_cursor]) + 1);
+      input_buf[input_buf_cursor] = c;
+      input_buf_cursor++;
+   }
+   redraw_screen();
+}
+
+static void tui_delete_char(int offset) {
+    if (offset > 0 && input_buf_cursor + offset <= strlen(input_buf)) {
+        memmove(&input_buf[input_buf_cursor], &input_buf[input_buf_cursor + offset], strlen(&input_buf[input_buf_cursor + offset]) + 1);
+    } else if (offset < 0 && input_buf_cursor + offset >= 0) {
+        memmove(&input_buf[input_buf_cursor + offset], &input_buf[input_buf_cursor], strlen(&input_buf[input_buf_cursor]) + 1);
+        input_buf_cursor += offset;
+    }
+    redraw_screen();
+}
+
+static void clear_input_buf(void) {
+   input_buf_offset = input_buf_cursor = 0;
+   memset(input_buf, 0, input_buf_sz);
+   redraw_screen();
+}
 
 // XXX: This is the biggest offender of code that belongs in ft8goblin.c, not here!
 void process_input(struct tb_event *evt) {
@@ -32,31 +65,131 @@ void process_input(struct tb_event *evt) {
          } else {
            menu_level = 0; // reset it to zero
          }
+         return;
+      } else if (evt->key == TB_KEY_BACKSPACE || evt->key == TB_KEY_CTRL_H || evt->key == 127) {
+         if (active_pane == PANE_INPUT) {
+            if (input_buf_offset >= 1) {		// is there text?
+               if (input_buf_cursor > 0) {
+                  tui_delete_char(-1);
+               } else {
+                  log_send(mainlog, LOG_DEBUG, "input_buf_cursor %d", input_buf_cursor);
+               }
+            } else {
+               log_send(mainlog, LOG_DEBUG, "input_buf_offset %d", input_buf_offset);
+            }
+            return;
+         } else {
+            log_send(mainlog, LOG_DEBUG, "got backspace outside of input field, ignoring!");
+         }
+      } else if (evt->key == TB_KEY_CTRL_U) {
+         if (active_pane == PANE_INPUT) {
+            clear_input_buf();
+         }
+      } else if (evt->key == TB_KEY_DELETE) {
+         if (active_pane == PANE_INPUT) {
+            tui_delete_char(1);
+            return;
+         }
+      } else if (evt->key == TB_KEY_HOME) {
+         if (active_pane == PANE_INPUT) {
+            input_buf_cursor = 0;
+         }
+      } else if (evt->key == TB_KEY_END) {
+         if (active_pane == PANE_INPUT) {
+            input_buf_cursor = strlen(input_buf);
+            redraw_screen();
+         }
+      } else if (evt->key == TB_KEY_F2) {		// Call CQ
+         memset(input_buf, 0, input_buf_sz);
+         char grid4[5];
+         memcpy(grid4, gridsquare, 4);
+         input_buf_offset = input_buf_cursor = snprintf(input_buf, input_buf_sz, "CQ %s %s", mycall, grid4);
+         redraw_screen();
+      } else if (evt->key == TB_KEY_F3) {		// XXX: CALL MYCALL RXREPORT
+         //
+      } else if (evt->key == TB_KEY_F4) { 	   	// XXX: CALL MYCALL R-RXREPORT
+         //
+      } else if (evt->key == TB_KEY_F5) {		// XXX: CALL MYCALL RR73
+         //
+      } else if (evt->key == TB_KEY_F6) {		// XXX: CALL MYCALL 73
+         //
+      } else if (evt->key == TB_KEY_F6) {		// XXX: CALL MYCALL 73
+         //
+      } else if (evt->key == TB_KEY_F7) {		// XXX:
+         //
+      } else if (evt->key == TB_KEY_F8) {		// XXX:
+         //
+      } else if (evt->key == TB_KEY_F9) {		// XXX:
+         //
+      } else if (evt->key == TB_KEY_F10) {		// XXX:
+         //
+      } else if (evt->key == TB_KEY_F11) {		// XXX:
+         //
+      } else if (evt->key == TB_KEY_F11) {		// XXX:
+         //
       } else if (evt->key == TB_KEY_TAB) {
         if (menu_level == 0) {		// only apply in main screen
-           if (active_pane < 2) {
+           if (active_pane < PANE_INPUT) {		// go forward
               active_pane++;
-           } else if (active_pane == 2) {
+           } else if (active_pane == PANE_INPUT) {	// wrap around
               active_pane = 0;
            }
         }
         redraw_screen();
+      } else if (evt->key == TB_KEY_ENTER) {
+         if (active_pane == PANE_INPUT) {
+            // XXX: Send the message!
+            log_send(mainlog, LOG_DEBUG, "We would send the message here... Msg: %s (%d)", input_buf, strlen(input_buf));
+            clear_input_buf();
+         }
       } else if (evt->key == TB_KEY_ARROW_LEFT) { 		// left cursor
          if (evt->mod == TB_MOD_CTRL) {
             log_send(mainlog, LOG_WARNING, "got theme_prev: Only theme available: default");
             // XXX: Go back a theme
+            return;
+         }
+         if (active_pane == PANE_INPUT) {
+            if (input_buf_cursor >= 1) {
+               input_buf_cursor--;
+            }
+            redraw_screen();
          }
       } else if (evt->key == TB_KEY_ARROW_RIGHT) {		// right cursor
          if (evt->mod == TB_MOD_CTRL) {
             log_send(mainlog, LOG_WARNING, "got theme_next: Only theme available: default");
             // XXX: Go forward a theme
+            return;
+         }
+         if (active_pane == PANE_INPUT) {
+            // only applies in PANE_INPUT...
+            if (input_buf_cursor < TUI_INPUT_BUFSZ) {
+               // as long as this isnt end of line, continue... We want the NULL at end to be our cursor
+               if (input_buf[input_buf_cursor] != '\0') {
+                  input_buf_cursor++;
+               }
+            }
+            redraw_screen();
          }
       } else if (evt->key == TB_KEY_ARROW_UP) {			// up cursor
+         if (active_pane == PANE_INPUT) {
+            // XXX: input scrollback
+         }
       } else if (evt->key == TB_KEY_ARROW_DOWN) {		// down cursor
+         if (active_pane == PANE_INPUT) {
+            // XXX: input scrollback
+         }
+      } else if (evt->key == TB_KEY_CTRL_A) {
+         if (auto_cycle == false) {
+            auto_cycle = true;
+         } else {
+            auto_cycle = false;
+         }
+         return;
       } else if (evt->key == TB_KEY_CTRL_B) {			// ^B
          if (menu_level == 0) {					// only if we're at main TUI screen (not in a menu)
             menu_show(&menu_bands, 0);
          }
+         return;
       } else if (evt->key == TB_KEY_CTRL_C) {			// ^C
          if (cq_only == false) {
             cq_only = true;
@@ -65,6 +198,7 @@ void process_input(struct tb_event *evt) {
          }
          redraw_screen();
          log_send(mainlog, LOG_INFO, "Toggled CQ Only to %s", (cq_only ? "On" : "Off"));
+         return;
       } else if (evt->key == TB_KEY_CTRL_E) {			// ^E
          // toggle TX Even/Odd
          if (tx_even == false) {
@@ -74,16 +208,14 @@ void process_input(struct tb_event *evt) {
          }
          redraw_screen();
          log_send(mainlog, LOG_INFO, "Toggled to %s TX slot!", (tx_even ? "EVEN" : "ODD"));
-      } else if (evt->key == TB_KEY_CTRL_H) {			// ^H
-         halt_tx_now();
-      } else if (evt->key == TB_KEY_CTRL_S) { 			// Is it ^S?
+         return;
+      } else if (evt->key == TB_KEY_CTRL_S) { 			// ^S
          if (menu_level == 0) {
             menu_history_clear();
             menu_show(&menu_main, 0);
-         } else {
-            // pass ^M through
          }
-      } else if (evt->key == TB_KEY_CTRL_T) {		// ^T
+         return;
+      } else if (evt->key == TB_KEY_CTRL_T) {			// ^T
          if (menu_level == 0) {
             toggle(&tx_enabled);
             redraw_screen();
@@ -93,6 +225,10 @@ void process_input(struct tb_event *evt) {
          }
          ta_printf(msgbox, "$RED$TX %sabled globally!", (tx_enabled ? "en" : "dis"));
          log_send(mainlog, LOG_NOTICE, "TX %sabled globally by user.", (tx_enabled ? "en" : "dis"));
+         return;
+      } else if (evt->key == TB_KEY_CTRL_W) {			// ^W
+         halt_tx_now();
+         return;
       } else if (evt->key == TB_KEY_CTRL_X || evt->key == TB_KEY_CTRL_Q) {	// is it ^X or ^Q? If so exit
          ta_printf(msgbox, "$RED$Goodbye! Hope you had a nice visit!");
          log_send(mainlog, LOG_NOTICE, "ft8goblin shutting down...");
@@ -101,8 +237,21 @@ void process_input(struct tb_event *evt) {
          exit(0);
          return;
       } else {      					// Nope - display the event data for debugging
-         ta_printf(msgbox, "$RED$unknown event: type=%d key=%d ch=%c", evt->type, evt->key, evt->ch);
-         log_send(mainlog, LOG_DEBUG, "unknown event: type=%d key=%d ch=%c", evt->type, evt->key, evt->ch);
+//         if (active_pane != PANE_INPUT) {
+            log_send(mainlog, LOG_DEBUG, "unknown tui-input event: type=%d key=%d ch=%c", evt->type, evt->key, evt->ch);
+//         }
+      }
+
+      // if we make it here, then this input has fallen through and should get added to input buffer (probably)
+      if (active_pane == PANE_INPUT) {
+         // but only if it's printable...
+         if (isprint(evt->ch)) {
+//            input_buf[input_buf_offset++] = evt->ch;
+            tui_insert_char(evt->ch);
+//            input_buf_cursor = input_buf_offset;
+            log_send(mainlog, LOG_DEBUG, "appending to %c to input_buf <%p>: %s at %lu", evt->ch, input_buf, input_buf, input_buf_offset);
+            redraw_screen();
+         }
       }
    } else if (evt->type == TB_EVENT_RESIZE) {
       // change the stored dimensions/layout variables above
@@ -168,4 +317,16 @@ int tui_io_watcher_init(void) {
    ev_timer_start(loop, &periodic_watcher);
 
    return rv;
+}
+
+void tui_input_init(void) {
+   memset(input_buf, 0, input_buf_sz);
+   if (input_buf_history == NULL) {
+      input_scrollback_lines = cfg_get_int(cfg, "ui/input-history-lines");
+      input_buf_history = rb_create(input_scrollback_lines, "input_sb");
+   }
+}
+
+void tui_input_shutdown(void) {
+   /// ...
 }

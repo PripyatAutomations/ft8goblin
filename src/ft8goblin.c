@@ -37,6 +37,8 @@ int	active_band = 40;		// Which band are we TXing on?
 bool	tx_even = false;		// TX even or odd cycle?
 bool	cq_only = false;		// Only show CQ & active QSOs?
 int	active_pane = 0;		// active pane (0: TextArea, 1: TX input)
+bool	auto_cycle = true;		// automatically switch to next message on RXing a response
+
 rb_buffer_t *callsign_lookup_history = NULL;
 size_t callsign_lookup_history_sz = 1;
 
@@ -70,7 +72,7 @@ static void print_help(void) {
    printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Switch Pane ");
    offset += 12;
 
-   printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "^H ");
+   printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "^W ");
    offset += 3;
    printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Halt TX now ");
    offset += 12;
@@ -85,10 +87,10 @@ static void print_help(void) {
    printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Even/Odd");
    offset = 7;
 
-   printf_tb(offset, 1, TB_RED|TB_BOLD, 0, "^1 - ^0 ");
-   offset += 8;
-   printf_tb(offset, 1, TB_MAGENTA|TB_BOLD, 0, "Automsg ");
-   offset += 8;
+   printf_tb(offset, 1, TB_RED|TB_BOLD, 0, "F2-F12 ");
+   offset += 7;
+   printf_tb(offset, 1, TB_MAGENTA|TB_BOLD, 0, "Automsgs ");
+   offset += 9;
 
    printf_tb(offset, 1, TB_RED|TB_BOLD, 0, "^C ");
    offset += 3;
@@ -114,6 +116,11 @@ static void print_help(void) {
    offset += 3;
    printf_tb(offset, 1, TB_MAGENTA|TB_BOLD, 0, "Settings ");
    offset += 9;
+
+   printf_tb(offset, 1, TB_RED|TB_BOLD, 0, "^A ");
+   offset += 3;
+   printf_tb(offset, 1, TB_MAGENTA|TB_BOLD, 0, "Auto ");
+   offset += 5;
 }
 
 static void print_status(void) {
@@ -135,89 +142,106 @@ static void print_status(void) {
       exit(EXIT_FAILURE);
    }
 
-   printf_tb(offset, height - 1, TB_YELLOW|TB_BOLD, 0, "%s ", outstr);
+   printf_tb(offset, line_status, TB_YELLOW|TB_BOLD, 0, "%s ", outstr);
    offset += 9;
 
    // callsign
-   printf_tb(offset, height - 1, TB_WHITE|TB_BOLD, 0, "[Oper:");
+   printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "[Oper:");
    offset += 6;
-   printf_tb(offset, height - 1, TB_CYAN|TB_BOLD, 0, "%s", mycall);
+   printf_tb(offset, line_status, TB_CYAN|TB_BOLD, 0, "%s", mycall);
    offset += strlen(mycall);
-   printf_tb(offset++, height - 1, TB_RED|TB_BOLD, 0, "@");
-   printf_tb(offset, height - 1, TB_CYAN|TB_BOLD, 0, "%s", gridsquare);
+   printf_tb(offset++, line_status, TB_RED|TB_BOLD, 0, "@");
+   printf_tb(offset, line_status, TB_CYAN|TB_BOLD, 0, "%s", gridsquare);
    offset += strlen(gridsquare);
-   printf_tb(offset, height - 1, TB_WHITE|TB_BOLD, 0, "] ");
+   printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "] ");
    offset += 2;
 
    // only show CQ and active QSOs?
-   printf_tb(offset, height - 1, TB_WHITE|TB_BOLD, 0, "[");
+   printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "[");
    offset++;
-   printf_tb(offset, height - 1, TB_CYAN, 0, "CQonly:");
+   printf_tb(offset, line_status, TB_CYAN, 0, "CQonly:");
    offset += 7;
 
    if (cq_only) {
-      printf_tb(offset, height - 1, TB_RED|TB_BOLD, 0, "ON");
+      printf_tb(offset, line_status, TB_RED|TB_BOLD, 0, "ON");
       offset += 2;
    } else {
-      printf_tb(offset, height - 1, TB_GREEN|TB_BOLD, 0, "OFF");
+      printf_tb(offset, line_status, TB_GREEN|TB_BOLD, 0, "OFF");
       offset += 3;
    }
-   printf_tb(offset, height - 1, TB_WHITE|TB_BOLD, 0, "] ");
+   printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "] ");
+   offset += 2;
+
+   // auto cycle
+   printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "[");
+   offset++;
+   printf_tb(offset, line_status, TB_GREEN|TB_BOLD, 0, "Auto:");
+   offset += 5;
+
+   if (auto_cycle) {
+      printf_tb(offset, line_status, TB_RED|TB_BOLD, 0, "ON");
+      offset += 2;
+   } else {
+      printf_tb(offset, line_status, TB_GREEN|TB_BOLD, 0, "OFF");
+      offset += 3;
+   }
+   printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "] ");
    offset += 2;
 
    // TX enabled status
-   printf_tb(offset, height - 1, TB_WHITE|TB_BOLD, 0, "[");
+   printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "[");
    offset++;
-   printf_tb(offset, height - 1, TB_GREEN|TB_BOLD, 0, "TX:");
+   printf_tb(offset, line_status, TB_GREEN|TB_BOLD, 0, "TX:");
    offset += 3;
 
    if (tx_enabled) {
-      printf_tb(offset, height - 1, TB_RED|TB_BOLD, 0, "ON");
+      printf_tb(offset, line_status, TB_RED|TB_BOLD, 0, "ON");
       offset += 2;
    } else {
-      printf_tb(offset, height - 1, TB_GREEN|TB_BOLD, 0, "OFF");
+      printf_tb(offset, line_status, TB_GREEN|TB_BOLD, 0, "OFF");
       offset += 3;
    }
-   printf_tb(offset, height - 1, TB_WHITE|TB_BOLD, 0, "] ");
+   printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "] ");
    offset += 2;
 
+
    // show bands with TX enabled, from yajl tree...
-   printf_tb(offset, height - 1, TB_WHITE|TB_BOLD, 0, "[");
+   printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "[");
    offset++;
-   printf_tb(offset, height - 1, TB_GREEN|TB_BOLD, 0, "TXBand:");
+   printf_tb(offset, line_status, TB_GREEN|TB_BOLD, 0, "TXBand:");
    offset += 7;
 
    if (active_band != 0) {
-      printf_tb(offset, height - 1, TB_RED|TB_BOLD, 0, "%dm", active_band);
+      printf_tb(offset, line_status, TB_RED|TB_BOLD, 0, "%dm", active_band);
       offset += 3;
 
-      printf_tb(offset++, height - 1, TB_WHITE|TB_BOLD, 0, "/");
+      printf_tb(offset++, line_status, TB_WHITE|TB_BOLD, 0, "/");
 
       if (tx_even) {
-         printf_tb(offset, height - 1, TB_YELLOW|TB_BOLD, 0, "EVEN");
+         printf_tb(offset, line_status, TB_YELLOW|TB_BOLD, 0, "EVEN");
          offset += 4;
       } else {
-         printf_tb(offset, height - 1, TB_YELLOW|TB_BOLD, 0, "ODD");
+         printf_tb(offset, line_status, TB_YELLOW|TB_BOLD, 0, "ODD");
          offset += 3;
       }
    }
 
-   printf_tb(offset, height - 1, TB_WHITE|TB_BOLD, 0, "] ");
+   printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "] ");
    offset += 2;
 
    // print the PTT status
 #if	0
-   printf_tb(offset, height - 1, TB_WHITE|TB_BOLD, 0, "[");
+   printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "[");
    offset++;
-   printf_tb(offset, height - 1, TB_GREEN|TB_BOLD, 0, "PTT:");
+   printf_tb(offset, line_status, TB_GREEN|TB_BOLD, 0, "PTT:");
    offset += 4;
    // Explode the list of radios actively PTTing
    for (int i = 0; i < max_rigs; i++) {
       if (rigs[i].ptt_active) {
-         printf_tb(offset, height - 1, TB_RED|TB_BOLD, 0, "%d", i);
+         printf_tb(offset, line_status, TB_RED|TB_BOLD, 0, "%d", i);
       }
    }
-   printf_tb(offset, height - 1, TB_WHITE|TB_BOLD, 0, "] ");
+   printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "] ");
    offset += 2;
 #endif
 
@@ -225,18 +249,16 @@ static void print_status(void) {
    memset(verbuf, 0, 128);
    snprintf(verbuf, 128, "ft8goblin/%s", VERSION);
    size_t ver_len = strlen(verbuf);
-   printf_tb(tb_width() - ver_len, height - 1, TB_MAGENTA|TB_BOLD, 0, "%s", verbuf);
+   printf_tb(tb_width() - ver_len, line_status, TB_MAGENTA|TB_BOLD, 0, "%s", verbuf);
    tb_present();
 }
 
 static void print_input(void) {
-   int x = 0,
-       y = height - 2;
-   if (active_pane == 2) {
-      printf_tb(x, y, TB_GREEN|TB_BOLD, TB_BLACK, "> ");
-      tb_set_cursor(x + 2, y);
+   if (active_pane == PANE_INPUT) {
+      printf_tb(0, line_input, TB_GREEN|TB_BOLD, TB_BLACK, "> %s", input_buf);
+      tb_set_cursor(2 + input_buf_cursor, line_input);
    } else {
-      printf_tb(x, y, TB_WHITE, TB_BLACK, "> ");
+      printf_tb(0, line_input, TB_WHITE, TB_BLACK, "> %s", input_buf);
       tb_hide_cursor();
    }
    tb_present();
@@ -326,7 +348,8 @@ void render_call_lookup(qrz_callsign_t *calldata) {
       log_send(mainlog, LOG_CRIT, "strftime() failed");
       exit(254);
    }
-   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Effective: %s, Expires: %s", datebuf_eff, datebuf_exp);
+   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Effective: %s", datebuf_eff);
+   printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Expires: %s", datebuf_exp);
    printf_tb(x, y++, TB_YELLOW|TB_BOLD, TB_BLACK, "Logbook QSOs: 3 (2 bands)");
    // skip a line
    y++;
@@ -557,11 +580,14 @@ int main(int argc, char **argv) {
    }
    log_send(mainlog, LOG_NOTICE, "ft8goblin starting up!");
 
+   // setup the TUI toolkit
    tui_init();
+   tui_input_init();
+   tui_io_watcher_init();
+
    // create the default TextArea for messages
    msgbox = ta_init("msgbox", cfg_get_int(cfg, "ui/scrollback-lines"));
    tui_resize_window(NULL);
-   tui_io_watcher_init();
    ta_printf(msgbox, "$CYAN$Welcome to ft8goblin, a console ft8 client with support for multiple bands!");
 
    // Draw the initial screen

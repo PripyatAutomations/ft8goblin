@@ -15,12 +15,13 @@ common_objs += util.o
 common_objs += maidenhead.o	# maidenhead coordinate tools
 tui_objs += tui.o tui-input.o tui-menu.o tui-textarea.o
 
-ft8goblin_objs += sql.o		# sqlite3 / postgis wrapper
 ft8goblin_objs += ${tui_objs} 	# text user interface
+ft8goblin_objs += adif.o	# ADIF logs
 ft8goblin_objs += fcc-db.o	# FCC ULS database
 ft8goblin_objs += ft8goblin.o	# main TUI program
 ft8goblin_objs += hamlib.o	# hamlib (rigctld) interface
 ft8goblin_objs += subproc.o	# subprocess management
+ft8goblin_objs += sql.o		# sqlite3 / postgis wrapper
 ft8goblin_objs += watch.o	# watch lists
 ft8coder_objs += ft8lib.o	# interface to the FT8 library
 ft8decoder_objs += decoderd-ft8.o ${ft8coder_objs}

@@ -65,6 +65,8 @@
       "theme": "default",
       "autoscroll": "true",
       "scrollback-lines": 300,
+      "input-history-lines": 30,
+      "callsign-lookup-history": 30,
       "alerts": {
          "alert-new-country": "true",
          "alert-new-dxcc": "true",

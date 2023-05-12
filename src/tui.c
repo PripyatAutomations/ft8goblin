@@ -143,7 +143,7 @@ void tui_shutdown(void) {
 
 void tui_init(void) {
    tb_init();
-   tb_set_input_mode(TB_INPUT_ESC | TB_EVENT_MOUSE);
+   tb_set_input_mode(TB_INPUT_ALT | TB_EVENT_MOUSE);
    // we should look at this again when we get configurable color schemes going
    // 256 or 216?
 //   tb_set_output_mode(TB_OUTPUT_256);
