@@ -130,7 +130,7 @@ my $en_insert_sql = "INSERT INTO uls_frn (unique_system_identifier, callsign, en
    $en_insert_sql .= " street_address, city, state, zip_code, po_box,";
    $en_insert_sql .= " attention_line , sgin, frn, applicant_type_code,";
    $en_insert_sql .= " applicant_type_other, status_code, lic_category_code,";
-   $en_insert_sql .= " linked_license_id, linked_callsign ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
+   $en_insert_sql .= " linked_license_id, linked_callsign ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
 my $en_insert_stmt = $dbh->prepare($en_insert_sql) or die "Failed preparing EN INSERT statement!\n";
 
 for my $dataset (@datasets) {
@@ -221,12 +221,6 @@ for my $dataset (@datasets) {
         print "mi: $mi\n";
         print "last_name: $last_name\n";
         print "suffix: $suffix\n";
-my $en_insert_sql = "INSERT INTO uls_frn (unique_system_identifier, callsign, entity_type, licensee_id, entity_name,";
-   $en_insert_sql .= " first_name, mi, last_name, suffix, phone, fax, email,";
-   $en_insert_sql .= " street_address, city, state, zip_code, po_box,";
-   $en_insert_sql .= " attention_line , sgin, frn, applicant_type_code,";
-   $en_insert_sql .= " applicant_type_other, status_code, lic_category_code,";
-   $en_insert_sql .= " linked_license_id, linked_callsign ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
 
         $en_insert_stmt->execute($unique_system_identifier, $callsign, $entity_type, $licensee_id, $entity_name, $first_name, $mi,
            $last_name, $suffix, $phone, $fax, $email, $street_adress, $city, $state,
