@@ -9,6 +9,7 @@
 #include "tui-menu.h"
 #include "tui-input.h"
 #include "tui-textarea.h"
+#include "tui-help.h"
 
 #define	MAX_TEXTAREAS	6
 

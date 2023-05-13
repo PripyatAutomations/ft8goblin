@@ -37,6 +37,7 @@ void tui_show_input(void) {
    tb_present();
 }
 
+// Internal function to insert a character at the cursor
 static void tui_insert_char(char c) {
    if (input_buf_cursor < input_buf_sz - 1) {
       memmove(&input_buf[input_buf_cursor + 1], &input_buf[input_buf_cursor], strlen(&input_buf[input_buf_cursor]) + 1);
@@ -46,6 +47,7 @@ static void tui_insert_char(char c) {
    redraw_screen();
 }
 
+// Internal function to delete a character aat some offset from the cursor (usually 1 for DEL and -1 for BACKSPACE)
 static void tui_delete_char(int offset) {
     if (offset > 0 && input_buf_cursor + offset <= strlen(input_buf)) {
         memmove(&input_buf[input_buf_cursor], &input_buf[input_buf_cursor + offset], strlen(&input_buf[input_buf_cursor + offset]) + 1);
@@ -60,6 +62,47 @@ static void tui_clear_input_buf(void) {
    input_buf_cursor = 0;
    memset(input_buf, 0, input_buf_sz);
    redraw_screen();
+}
+
+static rb_node_t *tui_inputbuf_find_prev(void) {
+   char *cp = NULL;
+   rb_node_t *p = input_buf_history->head;
+   rb_node_t *prev = NULL;
+
+   while (p->next != NULL) {
+      cp = (char *)p->data;
+
+      if (cp == NULL) {
+         fprintf(stderr, "tui_inputbuf_find_prev: data == NULL for node %p in rb <%p>", (void *)p, (void *)input_buf_history);
+         return NULL;
+      }
+
+      if (strcmp(cp, input_buf) == 0) {
+         log_send(mainlog, LOG_DEBUG, "tifp: match %p", p);
+         return prev;
+      }
+      prev = p;
+   }
+   return NULL;
+}
+
+static rb_node_t *tui_inputbuf_find_next(void) {
+   char *cp = NULL;
+   rb_node_t *p = input_buf_history->head;
+   while (p->next != NULL) {
+      cp = (char *)p->data;
+
+      if (cp == NULL) {
+         fprintf(stderr, "tui_inputbuf_find_prev: data == NULL for node %p in rb <%p>", (void *)p, (void *)input_buf_history);
+         return NULL;
+      }
+
+      if (strcmp(cp, input_buf) == 0) {
+         log_send(mainlog, LOG_DEBUG, "tifp: match %p", p);
+         return p;
+      }
+   }
+   return NULL;
 }
 
 // XXX: This is the biggest offender of code that belongs in ft8goblin.c, not here!
@@ -82,8 +125,6 @@ void tui_process_input(struct tb_event *evt) {
          if (active_pane == PANE_INPUT) {
             if (input_buf_cursor > 0) {
                tui_delete_char(-1);
-            } else {
-               log_send(mainlog, LOG_DEBUG, "input_buf_cursor %d", input_buf_cursor);
             }
             return;
          } else {
@@ -108,6 +149,11 @@ void tui_process_input(struct tb_event *evt) {
             input_buf_cursor = strlen(input_buf);
             redraw_screen();
          }
+      } else if (evt->key == TB_KEY_F1) {
+         // XXX: Figure out which help text to show based on active pain/window:
+         //     main, msgs, scrollback, input
+         help_show("main");
+         return;
       } else if (evt->key == TB_KEY_F2) {		// Call CQ
          memset(input_buf, 0, input_buf_sz);
          char grid4[5];
@@ -173,7 +219,7 @@ void tui_process_input(struct tb_event *evt) {
             // XXX: Send the message!
             char *mp = strndup(input_buf, TUI_INPUT_BUFSZ);
             if (mp == NULL) {
-               fprintf(stderr, "process_input: out of memory!");
+               fprintf(stderr, "process_input: out of memory!\n");
                exit(ENOMEM);
             }
 

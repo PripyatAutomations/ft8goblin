@@ -1,0 +1,12 @@
+[options]
+height=100%
+width=100%
+allow-ext-escapes=true
+name=Main Screen
+
+[text]
+Welcome to ft8ogoblin!
+
+$Link:keys,Key bindings$
+
+Stop by #hamradio on irc.efnet.org if you need help!

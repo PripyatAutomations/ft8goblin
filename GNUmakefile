@@ -13,7 +13,10 @@ common_objs += memory.o
 common_objs += ringbuffer.o
 common_objs += util.o
 common_objs += maidenhead.o	# maidenhead coordinate tools
-tui_objs += tui.o tui-input.o tui-menu.o tui-textarea.o
+
+# Our text user interface library... This will become it's own project once
+# keymap, etc are completed so we can decouple a bit from the user's code.
+tui_objs += tui.o tui-help.o tui-input.o tui-keymap.o tui-menu.o tui-textarea.o
 
 ft8goblin_objs += ${tui_objs} 	# text user interface
 ft8goblin_objs += adif.o	# ADIF logs
@@ -120,3 +123,7 @@ include mk/install.mk
 
 # Build all subdirectories first, then our binary
 world: ${extra_build_targets} ${real_bins}
+
+todo:
+	# We would use find here, but there's probably XXX: in subdirs we don't care about...
+	grep -Hn "XXX:" include/* src/* * etc/* sql/* scripts/* mk/* 2>/dev/null | less

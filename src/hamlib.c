@@ -17,6 +17,7 @@
 // We have to be careful to ensure all data is wrapped in a Hamlib object...
 // This is the only way we can support multiple radios.
 //
+// from hamlib
 extern int rig_raw2val();
 
 bool hamlib_close(Hamlib *rig) {

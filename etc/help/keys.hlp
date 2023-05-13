@@ -1,0 +1,22 @@
+[options]
+height=100%
+width=100%
+allow-ext-escapes=true
+name=Key bindings
+
+[text]
+ESC		Go Back
+PGUP/PGDN	Scroll
+TAB		Switch Pane
+F2-F12 		Automsgs
+^B 		Bands
+^C 		CQ Only
+^F 		Filters
+^W 		Halt TX now
+^T 		Toggle TX
+^P 		Even/Odd
+^L 		Lookup
+^O 		TXMode 
+^S 		Settings
+^Y 		Auto
+^Q/^X 		Exit

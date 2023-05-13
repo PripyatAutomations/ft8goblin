@@ -10,14 +10,15 @@ These are not in any particular order, but stuff near the bottom is probably far
   - This should allow clicking them with the mouse
 * Rework the key binding help to be derived from the active keymap, so it
   updates keys available as you move around the program
+* Waterfall window
 * Work on database logging
-* Finish QSO database
 * Complete ft8decoder using ft8lib for ft4 and ft8
 * Get messages displaying in ft8goblin from test samples sent to ft8decoder processes
 * Finish QRZ XML api implementation
 * Finish FCC ULS database stuff
-* Get sigcapd pulling from usrp and slicing appropriately ot feed ft8decoder processes
-* Add TX support, using usrp or hamlib supported rigs
+* Get sigcapd pulling from usrp and slicing appropriately to feed decoderd-* processes
+* Add TX support, using usrp or hamlib supported rigs and alsa/pulseaudio
+  XXX: Find a library that will make this easier
 * Document things
 * instead of timeout in seconds, timeout after X unacknowledged TXes
 * Work on making things smart enough to deal with being installed on the host

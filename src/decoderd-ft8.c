@@ -35,19 +35,16 @@ const int kMax_decoded_messages = 50;
 const int kFreq_osr = 2; // Frequency oversampling rate (bin subdivision)
 const int kTime_osr = 2; // Time oversampling rate (symbol subdivision)
 
-void usage()
-{
+void usage() {
     fprintf(stderr, "Decode a 15-second (or slighly shorter) WAV file.\n");
 }
 
-static float hann_i(int i, int N)
-{
+static float hann_i(int i, int N) {
     float x = sinf((float)M_PI * i / N);
     return x * x;
 }
 
-static float hamming_i(int i, int N)
-{
+static float hamming_i(int i, int N) {
     const float a0 = (float)25 / 46;
     const float a1 = 1 - a0;
 
@@ -55,8 +52,7 @@ static float hamming_i(int i, int N)
     return a0 - a1 * x1;
 }
 
-static float blackman_i(int i, int N)
-{
+static float blackman_i(int i, int N) {
     const float alpha = 0.16f; // or 2860/18608
     const float a0 = (1 - alpha) / 2;
     const float a1 = 1.0f / 2;
@@ -68,8 +64,7 @@ static float blackman_i(int i, int N)
     return a0 - a1 * x1 + a2 * x2;
 }
 
-void waterfall_init(waterfall_t* me, int max_blocks, int num_bins, int time_osr, int freq_osr)
-{
+void waterfall_init(waterfall_t* me, int max_blocks, int num_bins, int time_osr, int freq_osr) {
     size_t mag_size = max_blocks * time_osr * freq_osr * num_bins * sizeof(me->mag[0]);
     me->max_blocks = max_blocks;
     me->num_blocks = 0;
@@ -81,14 +76,12 @@ void waterfall_init(waterfall_t* me, int max_blocks, int num_bins, int time_osr,
     LOG(LOG_DEBUG, "Waterfall size = %zu\n", mag_size);
 }
 
-void waterfall_free(waterfall_t* me)
-{
+void waterfall_free(waterfall_t* me) {
     free(me->mag);
 }
 
 /// Configuration options for FT4/FT8 monitor
-typedef struct
-{
+typedef struct {
     float f_min;             ///< Lower frequency bound for analysis
     float f_max;             ///< Upper frequency bound for analysis
     int sample_rate;         ///< Sample rate in Hertz
@@ -99,20 +92,19 @@ typedef struct
 
 /// FT4/FT8 monitor object that manages DSP processing of incoming audio data
 /// and prepares a waterfall object
-typedef struct
-{
+typedef struct {
     float symbol_period; ///< FT4/FT8 symbol period in seconds
     int block_size;      ///< Number of samples per symbol (block)
     int subblock_size;   ///< Analysis shift size (number of samples)
     int nfft;            ///< FFT size
     float fft_norm;      ///< FFT normalization factor
-    float* window;       ///< Window function for STFT analysis (nfft samples)
-    float* last_frame;   ///< Current STFT analysis frame (nfft samples)
+    float *window;       ///< Window function for STFT analysis (nfft samples)
+    float *last_frame;   ///< Current STFT analysis frame (nfft samples)
     waterfall_t wf;      ///< Waterfall object
     float max_mag;       ///< Maximum detected magnitude (debug stats)
 
     // KISS FFT housekeeping variables
-    void* fft_work;        ///< Work area required by Kiss FFT
+    void *fft_work;        ///< Work area required by Kiss FFT
     kiss_fftr_cfg fft_cfg; ///< Kiss FFT housekeeping object
 } monitor_t;
 
@@ -158,8 +150,7 @@ void monitor_init(monitor_t* me, const monitor_config_t* cfg)
     me->max_mag = -120.0f;
 }
 
-void monitor_free(monitor_t* me)
-{
+void monitor_free(monitor_t *me) {
     waterfall_free(&me->wf);
     free(me->fft_work);
     free(me->last_frame);
@@ -167,7 +158,7 @@ void monitor_free(monitor_t* me)
 }
 
 // Compute FFT magnitudes (log wf) for a frame in the signal and update waterfall data
-void monitor_process(monitor_t* me, const float* frame)
+void monitor_process(monitor_t *me, const float* frame)
 {
     // Check if we can still store more waterfall data
     if (me->wf.num_blocks >= me->wf.max_blocks)
@@ -177,35 +168,29 @@ void monitor_process(monitor_t* me, const float* frame)
     int frame_pos = 0;
 
     // Loop over block subdivisions
-    for (int time_sub = 0; time_sub < me->wf.time_osr; ++time_sub)
-    {
+    for (int time_sub = 0; time_sub < me->wf.time_osr; ++time_sub) {
         kiss_fft_scalar timedata[me->nfft];
         kiss_fft_cpx freqdata[me->nfft / 2 + 1];
 
         // Shift the new data into analysis frame
-        for (int pos = 0; pos < me->nfft - me->subblock_size; ++pos)
-        {
+        for (int pos = 0; pos < me->nfft - me->subblock_size; ++pos) {
             me->last_frame[pos] = me->last_frame[pos + me->subblock_size];
         }
-        for (int pos = me->nfft - me->subblock_size; pos < me->nfft; ++pos)
-        {
+        for (int pos = me->nfft - me->subblock_size; pos < me->nfft; ++pos) {
             me->last_frame[pos] = frame[frame_pos];
             ++frame_pos;
         }
 
         // Compute windowed analysis frame
-        for (int pos = 0; pos < me->nfft; ++pos)
-        {
+        for (int pos = 0; pos < me->nfft; ++pos) {
             timedata[pos] = me->fft_norm * me->window[pos] * me->last_frame[pos];
         }
 
         kiss_fftr(me->fft_cfg, timedata, freqdata);
 
         // Loop over two possible frequency bin offsets (for averaging)
-        for (int freq_sub = 0; freq_sub < me->wf.freq_osr; ++freq_sub)
-        {
-            for (int bin = 0; bin < me->wf.num_bins; ++bin)
-            {
+        for (int freq_sub = 0; freq_sub < me->wf.freq_osr; ++freq_sub) {
+            for (int bin = 0; bin < me->wf.num_bins; ++bin) {
                 int src_bin = (bin * me->wf.freq_osr) + freq_sub;
                 float mag2 = (freqdata[src_bin].i * freqdata[src_bin].i) + (freqdata[src_bin].r * freqdata[src_bin].r);
                 float db = 10.0f * log10f(1E-12f + mag2);
@@ -225,8 +210,7 @@ void monitor_process(monitor_t* me, const float* frame)
     ++me->wf.num_blocks;
 }
 
-void monitor_reset(monitor_t* me)
-{
+void monitor_reset(monitor_t* me) {
     me->wf.num_blocks = 0;
     me->max_mag = 0;
 }

@@ -52,6 +52,7 @@ static void print_help(void) {
    printf_tb(offset, 0, TB_GREEN|TB_BOLD, 0, "*Keys* ");
    offset += 7;
 
+
    printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "^Q/^X ");
    offset += 6;
    printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Exit ");
@@ -86,6 +87,11 @@ static void print_help(void) {
    offset += 3;
    printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Even/Odd");
    offset = 7;
+
+   printf_tb(offset, 1, TB_RED|TB_BOLD, 0, "F1 ");
+   offset += 3;
+   printf_tb(offset, 1, TB_MAGENTA|TB_BOLD, 0, "Help ");
+   offset += 5;
 
    printf_tb(offset, 1, TB_RED|TB_BOLD, 0, "F2-F12 ");
    offset += 7;
@@ -567,6 +573,7 @@ void redraw_screen(void) {
    } else {
       printf_tb(1, 1, TB_RED|TB_BOLD, 0, "[display] Your terminal has a size of %dx%d, this is too small!", width, height);
       printf_tb(1, 2, TB_RED|TB_BOLD, 0, "Please resize it to at least %dx%d!\n", MIN_WIDTH, MIN_HEIGHT);
+      printf_tb(1, 3, TB_YELLOW|TB_BOLD, 0, "You can use ctrl-X or ctrl-q to exit or resize your terminal to continue.\n");
       tb_hide_cursor();
    }
    tb_present();

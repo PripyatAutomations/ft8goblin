@@ -125,12 +125,12 @@ my $am_insert_sql = "INSERT INTO uls_ham (unique_system_identifier, uls_file_num
    $am_insert_sql .= "vanity_callsign_change, vanity_relationship, previous_callsign, previous_operator_class, trustee_name) ";
    $am_insert_sql .= "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
 my $am_insert_stmt = $dbh->prepare($am_insert_sql) or die "Failed preparing AC INSERT statement!";
-my $en_insert_sql = "INSERT INTO uls_frn (unique_system_identifier, entity_type, licensee_id, entity_name,";
+my $en_insert_sql = "INSERT INTO uls_frn (unique_system_identifier, callsign, entity_type, licensee_id, entity_name,";
    $en_insert_sql .= " first_name, mi, last_name, suffix, phone, fax, email,";
    $en_insert_sql .= " street_address, city, state, zip_code, po_box,";
    $en_insert_sql .= " attention_line , sgin, frn, applicant_type_code,";
    $en_insert_sql .= " applicant_type_other, status_code, lic_category_code,";
-   $en_insert_sql .= " linked_license_id, linked_callsign ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
+   $en_insert_sql .= " linked_license_id, linked_callsign ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
 my $en_insert_stmt = $dbh->prepare($en_insert_sql) or die "Failed preparing EN INSERT statement!\n";
 
 for my $dataset (@datasets) {
@@ -195,6 +195,7 @@ for my $dataset (@datasets) {
         my $fax = $record[13];
         my $email = lc $record[14];
         my $street_adress = uc $record[15];
+        #
         my $city = uc $record[16];
         my $state = uc $record[17];
         my $zip_code = $record[18];
@@ -210,14 +211,30 @@ for my $dataset (@datasets) {
         my $linked_license_id = $record[28];
         my $linked_callsign = uc $record[29];
 
+        print "unique_system_identifier: $unique_system_identifier\n";
+        print "uls_file_number: $uls_file_number\n";
+        print "ebf_number: $ebf_number\n";
+        print "callsign: $callsign\n";
+        print "licensee_id: $licensee_id\n";
+        print "entity_name: $entity_name\n";
+        print "first_name: $first_name\n";
+        print "mi: $mi\n";
+        print "last_name: $last_name\n";
+        print "suffix: $suffix\n";
+my $en_insert_sql = "INSERT INTO uls_frn (unique_system_identifier, callsign, entity_type, licensee_id, entity_name,";
+   $en_insert_sql .= " first_name, mi, last_name, suffix, phone, fax, email,";
+   $en_insert_sql .= " street_address, city, state, zip_code, po_box,";
+   $en_insert_sql .= " attention_line , sgin, frn, applicant_type_code,";
+   $en_insert_sql .= " applicant_type_other, status_code, lic_category_code,";
+   $en_insert_sql .= " linked_license_id, linked_callsign ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
 
-        $en_insert_stmt->execute($entity_type, $licensee_id, $entity_name, $first_name, $mi,
+        $en_insert_stmt->execute($unique_system_identifier, $callsign, $entity_type, $licensee_id, $entity_name, $first_name, $mi,
            $last_name, $suffix, $phone, $fax, $email, $street_adress, $city, $state,
            $zip_code, $po_box, $attention_line, $sgin, $frn, $applicant_type_code,
            $applicant_type_other, $status_code, $lic_category_code, $linked_license_id,
-           $linked_callsign, $unique_system_identifier) or die "Failed UPDATEing record for $frn from EN data\n";
+           $linked_callsign) or die "Failed UPDATEing record for $frn from EN data\n";
      } else {
-       die "Unknown dataset $dataset, bailing"
+        die "Unknown dataset $dataset, bailing"
      }
      $buffer .= $line . "\n";
    }

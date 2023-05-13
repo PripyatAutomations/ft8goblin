@@ -145,8 +145,13 @@ void tui_init(void) {
    tb_init();
    tb_set_input_mode(TB_INPUT_ALT | TB_INPUT_MOUSE);
    // we should look at this again when we get configurable color schemes going
+   int color_mode = cfg_get_int(cfg, "ui/color-mode");
    // 256 or 216?
-//   tb_set_output_mode(TB_OUTPUT_256);
+   if (color_mode == 216) {
+      tb_set_output_mode(TB_OUTPUT_216);
+   } else if (color_mode == 256) {
+      tb_set_output_mode(TB_OUTPUT_256);
+   }
 }
 
 //////////

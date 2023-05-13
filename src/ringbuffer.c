@@ -74,6 +74,11 @@ rb_node_t *rb_add(rb_buffer_t *buffer, void *data, int needs_freed) {
    }
    if (buffer->current_size == buffer->max_size) {
        rb_node_t *next_head = buffer->head->next;
+
+       // before freeing the buffer structure, make sure free it's allocated memory
+       if (buffer->head->needs_freed && buffer->head->data != NULL)
+          free(buffer->head->data);
+
        free(buffer->head);
        buffer->head = next_head;
        buffer->current_size--;
