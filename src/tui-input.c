@@ -309,7 +309,11 @@ void tui_process_input(struct tb_event *evt) {
          return;
       } else if (evt->key == TB_KEY_CTRL_T) {			// ^T
          if (menu_level == 0) {
-            toggle(&tx_enabled);
+            if (tx_enabled == false) {
+               tx_enabled = true;
+            } else {
+               tx_enabled = false;
+            }
             redraw_screen();
          } else {
             // always disable if in a submenu, only allow activating TX from home screen

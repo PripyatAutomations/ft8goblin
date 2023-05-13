@@ -17,7 +17,7 @@
 #include "ft8_lib/fft/kiss_fftr.h"
 
 char *progname = "ft8decoder";
-int dying = 0;
+bool dying = false;
 
 void exit_fix_config(void) {
    printf("Please edit your config.json and try again!\n");

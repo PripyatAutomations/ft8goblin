@@ -9,8 +9,6 @@
 // XXX: We should mirror log messages above a set priority into the msgbox TextArea if it exists ;)
 // from main program usually
 extern char *progname;
-extern int dying;
-
 LogHndl *mainlog = NULL;
 
 static struct log_levels {

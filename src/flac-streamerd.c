@@ -15,7 +15,7 @@
 #include "util.h"
 
 const char *progname = "flac-streamerd";
-int dying = 0;
+bool dying = 0;
 
 int main(int argc, char **argv) {
    return 0;

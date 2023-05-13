@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int dying = 0;
+bool dying = false;
 char *progname = "ft8encoder";
 
 void exit_fix_config(void) {

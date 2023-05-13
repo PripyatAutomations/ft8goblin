@@ -25,6 +25,6 @@ Here's a rough draft of how things work
 		Controls and captures samples from a radio and provides samples
 		to decoderd-*, streamerd, etc
 
-	streamerd
+	flac-streamerd
 		Encodes a slice and sends it via FLAC compression to a user
 		for decoding or waterfall display. (NYI)

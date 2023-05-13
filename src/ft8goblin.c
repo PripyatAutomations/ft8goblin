@@ -27,9 +27,9 @@ char *progname = "ft8goblin";
 TextArea *msgbox = NULL;
 const char *mycall = NULL;	// cfg:ui/mycall
 const char *gridsquare = NULL;	// cfg:ui/gridsquare
-int	dying = 0;		// Are we shutting down?
-int	tx_enabled = 0;		// Master toggle to TX mode.
-
+bool	dying = 0;		// Are we shutting down?
+bool	tx_enabled = false;		// Master toggle to TX mode.
+bool	tx_pending = false;
 int	line_status = -1;		// status line
 int 	line_input = -1;		// input field
 int	height = -1, width = -1;

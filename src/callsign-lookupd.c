@@ -27,7 +27,7 @@ static bool callsign_use_uls = false, callsign_use_qrz = false, callsign_initial
 
 // common shared things for our library
 const char *progname = "callsign-lookupd";
-int dying = 0;
+bool dying = 0;
 
 // Load the configuration (cfg_get_str(...)) into *our* configuration locals
 static void callsign_setup(void) {
