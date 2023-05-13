@@ -10,6 +10,6 @@ extern "C" {
    extern int is_file(const char *path);
    extern int is_fifo(const char *path);
 #ifdef __cplusplus
-}:
+};
 #endif
 #endif	// !defined(_util_h)

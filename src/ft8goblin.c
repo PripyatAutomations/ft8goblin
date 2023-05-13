@@ -341,7 +341,7 @@ void render_call_lookup(qrz_callsign_t *calldata) {
    }
       
    y++; x = default_x + 1;;
-   printf_tb(x, y++, TB_RED|TB_BOLD, TB_BLACK, "Prev. Calls: %s", calldata->previous_call);
+   printf_tb(x, y++, TB_WHITE, TB_BLACK, "Prev. Calls: %s", calldata->previous_call);
    // XXX: Add days til expires?
 
 
@@ -371,9 +371,11 @@ void render_call_lookup(qrz_callsign_t *calldata) {
    printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Effective: %s", datebuf_eff);
    printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Expires: %s", datebuf_exp);
    printf_tb(x, y++, TB_YELLOW|TB_BOLD, TB_BLACK, "Logbook QSOs: 3 (2 bands)");
+
    // skip a line
    y++;
    printf_tb(x, y++, TB_GREEN|TB_BOLD, TB_BLACK, "%s %s", calldata->first_name, calldata->last_name);
+
    if (calldata->address_attn > 0) {
       printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "ATTN: %s", calldata->address_attn);
    }

@@ -2,7 +2,7 @@
 # Why this so slow? :(
 # Anyways, here we import already downloaded and unpacked FCC ULS (Universal License System) records for ham and GMRS into SQL.
 # XXX: ToDo - Finish the code for confirming the counts after finished
-
+# It looks like we may need to import a lot more than we just AM and EN 
 use strict;
 use warnings;
 use DBI;
@@ -35,7 +35,7 @@ my $sql_buffer = "";
 
 my $sql_create_uls_ham = "
 create table uls_ham (
-      unique_system_identifier  numeric(9,0)         not null,
+      unique_id  numeric(9,0)         not null,
       uls_file_number              char(14)             null,
       ebf_number                varchar(30)          null,
       callsign                  char(10)             null,
@@ -57,7 +57,7 @@ create table uls_ham (
 
 my $sql_create_uls_frn = "
 create table uls_frn (
-      unique_system_identifier  numeric(9,0)         not null,
+      unique_id  numeric(9,0)         not null,
       uls_file_number           char(14)             null,
       ebf_number                varchar(30)          null,
       callsign                 char(10)             null,
@@ -96,9 +96,9 @@ my $create_uls_frn_stmt = $dbh->prepare($sql_create_uls_frn) or die "create_uls_
 $create_uls_frn_stmt->execute() or die "create_uls_frn_stmt: execute\n";
 $dbh->do("BEGIN TRANSACTION");
 $dbh->do("CREATE INDEX idx_ham_callsign ON uls_ham (callsign);") or die "create idx_ham_callsign\n";
-$dbh->do("CREATE INDEX idx_ham_unique_sys_id ON uls_ham (unique_system_identifier);") or die "create idx_ham_unique_sys_id\n";
+$dbh->do("CREATE INDEX idx_ham_unique_sys_id ON uls_ham (unique_id);") or die "create idx_ham_unique_sys_id\n";
 $dbh->do("CREATE INDEX idx_ham_uls_file_number ON uls_ham (uls_file_number);") or die "create idx_ham_uls_file_number\n";
-$dbh->do("CREATE INDEX idx_frn_unique_sys_id ON uls_frn (unique_system_identifier);") or die "create idx_frn_unique_sys_id\n";
+$dbh->do("CREATE INDEX idx_frn_unique_sys_id ON uls_frn (unique_id);") or die "create idx_frn_unique_sys_id\n";
 $dbh->do("CREATE INDEX idx_frn_file_number ON uls_frn (uls_file_number);") or die "create idx_frn_file_number\n";
 $dbh->do("CREATE INDEX idx_frn_fname ON uls_frn (first_name);") or die "create idx_frn_fname\n";
 $dbh->do("CREATE INDEX idx_frn_lname ON uls_frn (last_name);") or die "create idx_frn_lname\n";
@@ -120,12 +120,12 @@ my $dataset_warnings = { };
 my $data_dir = "data-sources/fcc-uls/fcc_uls_amateur";
 
 # SQL statements used below, prepared once for efficiency...
-my $am_insert_sql = "INSERT INTO uls_ham (unique_system_identifier, uls_file_number, ebf_number, callsign, operator_class, group_code, ";
+my $am_insert_sql = "INSERT INTO uls_ham (unique_id, uls_file_number, ebf_number, callsign, operator_class, group_code, ";
    $am_insert_sql .= "region_code, trustee_callsign, trustee_indicator, physician_certification, ve_signature, systematic_callsign_change, ";
    $am_insert_sql .= "vanity_callsign_change, vanity_relationship, previous_callsign, previous_operator_class, trustee_name) ";
    $am_insert_sql .= "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
 my $am_insert_stmt = $dbh->prepare($am_insert_sql) or die "Failed preparing AC INSERT statement!";
-my $en_insert_sql = "INSERT INTO uls_frn (unique_system_identifier, callsign, entity_type, licensee_id, entity_name,";
+my $en_insert_sql = "INSERT INTO uls_frn (unique_id, callsign, entity_type, licensee_id, entity_name,";
    $en_insert_sql .= " first_name, mi, last_name, suffix, phone, fax, email,";
    $en_insert_sql .= " street_address, city, state, zip_code, po_box,";
    $en_insert_sql .= " attention_line , sgin, frn, applicant_type_code,";
@@ -155,7 +155,7 @@ for my $dataset (@datasets) {
      }
 
      if ($dataset =~ m/^AM$/) {
-        my $unique_system_identifier = $record[1];
+        my $unique_id = $record[1];
         my $uls_file_number = $record[2];
         my $ebf_number = $record[3];
         my $callsign = uc $record[4];
@@ -174,13 +174,13 @@ for my $dataset (@datasets) {
         my $trustee_name = uc $record[17];
 
         # Insert the record into SQL...
-        $am_insert_stmt->execute($unique_system_identifier, $uls_file_number, $ebf_number, $callsign, $operator_class,
+        $am_insert_stmt->execute($unique_id, $uls_file_number, $ebf_number, $callsign, $operator_class,
                                  $group_code, $region_code, $trustee_callsign, $trustee_indicator, $physician_certification,
                                  $ve_signature, $systematic_callsign_change, $vanity_callsign_change, $vanity_relationship,
                                  $previous_callsign, $previous_operator_class, $trustee_name) or die "Failed executing INSERTing record for $uls_file_number from AM\n";
      } elsif ($dataset =~ m/^EN$/) {
         # Here we update that database to add address
-        my $unique_system_identifier = $record[1];
+        my $unique_id = $record[1];
         my $uls_file_number = $record[2];
         my $ebf_number = $record[3];
         my $callsign = uc $record[4];
@@ -211,18 +211,18 @@ for my $dataset (@datasets) {
         my $linked_license_id = $record[28];
         my $linked_callsign = uc $record[29];
 
-        print "unique_system_identifier: $unique_system_identifier\n";
-        print "uls_file_number: $uls_file_number\n";
-        print "ebf_number: $ebf_number\n";
-        print "callsign: $callsign\n";
-        print "licensee_id: $licensee_id\n";
-        print "entity_name: $entity_name\n";
-        print "first_name: $first_name\n";
-        print "mi: $mi\n";
-        print "last_name: $last_name\n";
-        print "suffix: $suffix\n";
+#        print "unique_id: $unique_id\n";
+#        print "uls_file_number: $uls_file_number\n";
+#        print "ebf_number: $ebf_number\n";
+#        print "callsign: $callsign\n";
+#        print "licensee_id: $licensee_id\n";
+#        print "entity_name: $entity_name\n";
+#        print "first_name: $first_name\n";
+#        print "mi: $mi\n";
+#        print "last_name: $last_name\n";
+#        print "suffix: $suffix\n";
 
-        $en_insert_stmt->execute($unique_system_identifier, $callsign, $entity_type, $licensee_id, $entity_name, $first_name, $mi,
+        $en_insert_stmt->execute($unique_id, $callsign, $entity_type, $licensee_id, $entity_name, $first_name, $mi,
            $last_name, $suffix, $phone, $fax, $email, $street_adress, $city, $state,
            $zip_code, $po_box, $attention_line, $sgin, $frn, $applicant_type_code,
            $applicant_type_other, $status_code, $lic_category_code, $linked_license_id,
