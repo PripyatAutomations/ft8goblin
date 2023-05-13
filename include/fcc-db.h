@@ -8,6 +8,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+    extern calldata_t *uls_lookup_callsign(const char *callsign);
 #ifdef __cplusplus
 };
 #endif

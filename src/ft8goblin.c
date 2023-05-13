@@ -2,6 +2,7 @@
  * This needs much improvement and a lot of src/tui-textarea.c belongs as a keymap here
  */
 #include "config.h"
+#include "ft8goblin_types.h"
 #include "subproc.h"
 #include "util.h"
 #include "tui.h"
@@ -9,7 +10,7 @@
 #include "watch.h"
 #include "daemon.h"
 #include "qrz-xml.h"
-#include "ft8goblin_types.h"
+#include "subproc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -279,8 +280,8 @@ static void print_status(void) {
 }
 
 // XXX: Need to make this use of TextArea functions
-// Renders the data passed in a qrz_callsign_t to the callsign lookup 'window'
-void render_call_lookup(qrz_callsign_t *calldata) {
+// Renders the data passed in a calldata_t to the callsign lookup 'window'
+void render_call_lookup(calldata_t *calldata) {
    int default_x = (width / 2) + 1,
        x = default_x,
        y = 2;
@@ -311,7 +312,7 @@ void render_call_lookup(qrz_callsign_t *calldata) {
    printf_tb(x, y++, WIN_BORDER_FG, WIN_BORDER_BG, "┌%s┐", padbuf);
    x += 1;
    printf_tb(x, y++, TB_RED|TB_BOLD, TB_BLACK, "Callsign %s (Active QSO)", calldata->callsign);
-   printf_tb(x, y++, TB_CYAN|TB_BOLD, TB_BLACK, "DXCC %s Grid %s = %3.3f,%3.3f", calldata->dxcc, calldata->grid,
+   printf_tb(x, y++, TB_CYAN|TB_BOLD, TB_BLACK, "DXCC %d Grid %s = %3.3f,%3.3f", calldata->dxcc, calldata->grid,
       calldata->latitude, calldata->longitude);
 
    printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "Distance: 1102 mi, heading 293°");
@@ -376,7 +377,7 @@ void render_call_lookup(qrz_callsign_t *calldata) {
    y++;
    printf_tb(x, y++, TB_GREEN|TB_BOLD, TB_BLACK, "%s %s", calldata->first_name, calldata->last_name);
 
-   if (calldata->address_attn > 0) {
+   if (calldata->address_attn[0] != '\0') {
       printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "ATTN: %s", calldata->address_attn);
    }
    printf_tb(x, y++, TB_WHITE|TB_BOLD, TB_BLACK, "%s", calldata->address1);
@@ -445,7 +446,7 @@ char *pad_db(char *buf, size_t buf_len, int db, int digits) {
 }
 
 // XXX: temporary thing for our mockup...
-qrz_callsign_t *fake_q;
+calldata_t *fake_q;
 
 void draw_fake_ta(void) {
    char datebuf[128];
@@ -509,15 +510,15 @@ void draw_fake_ta(void) {
    // XXX: In the real code, we'll need to search the RingBuffer for our pointer.
    if (fake_q == NULL) {
       // don't manually free this as it will be freed by the RingBuffer code!
-      if ((fake_q = malloc(sizeof(qrz_callsign_t))) == NULL) {
+      if ((fake_q = malloc(sizeof(calldata_t))) == NULL) {
          fprintf(stderr, "draw_fake_ta: out of memory!\n");
          exit(ENOMEM);
       }
       
-      memset(fake_q, 0, sizeof(qrz_callsign_t));
-      memset(fake_q, 0, sizeof(qrz_callsign_t));
+      memset(fake_q, 0, sizeof(calldata_t));
+      memset(fake_q, 0, sizeof(calldata_t));
       snprintf(fake_q->callsign, sizeof(fake_q->callsign), "AA1AB");
-      snprintf(fake_q->dxcc, sizeof(fake_q->dxcc), "291");
+      fake_q->dxcc = 291;
       snprintf(fake_q->grid, MAX_GRID_LEN, "EM32");
       snprintf(fake_q->previous_call, MAX_CALLSIGN, "N0FUX");
       snprintf(fake_q->first_name, sizeof(fake_q->first_name), "Robert");
@@ -566,7 +567,7 @@ void redraw_screen(void) {
       // Show help (keys)
       print_help();
       // redraw all TextAreas
-   //   ta_redraw_all();
+//      ta_redraw_all();
       draw_fake_ta();
       // print the input prompt
       tui_show_input();
@@ -629,7 +630,7 @@ int main(int argc, char **argv) {
         // XXX: Figure out which bands can be connected to which devices and start slicers in sigcapd
    //	ft8decoder (one per band)
    // 	callsign-lookupd (one instance)
-//        subproc_start()
+//   subproc_start();
 
    // main loop...
    while (!dying) {

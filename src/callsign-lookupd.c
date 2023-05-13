@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <ev.h>
 static bool callsign_use_uls = false, callsign_use_qrz = false, callsign_initialized = false;
 
 // common shared things for our library
@@ -30,7 +31,7 @@ const char *progname = "callsign-lookupd";
 bool dying = 0;
 
 // Load the configuration (cfg_get_str(...)) into *our* configuration locals
-static void callsign_setup(void) {
+static void callsign_lookup_setup(void) {
    callsign_initialized = true;
 
    // Use local ULS database?
@@ -53,38 +54,44 @@ static void callsign_setup(void) {
 }
    
 // save a callsign record to the cache
-bool callsign_cache_save(qrz_callsign_t *cp) {
+bool callsign_cache_save(calldata_t *cp) {
     return false;
 }
 
-qrz_callsign_t *callsign_cache_find(const char *callsign) {
+calldata_t *callsign_cache_find(const char *callsign) {
     return NULL;
 }
 
-qrz_callsign_t *callsign_lookup(const char *callsign) {
+calldata_t *callsign_lookup(const char *callsign) {
     bool from_cache = false;
-    qrz_callsign_t *qr = NULL;
+    calldata_t *qr = NULL;
 
     if (!callsign_initialized) {
-       callsign_setup();
+       callsign_lookup_setup();
     }
 
+/*
     // Look in cache
-    qrz_callsign_t *cp = NULL;
-    if ((cp = callsign_cache_find(callsign)) != NULL) {
+    if ((qr = callsign_cache_find(callsign)) != NULL) {
        from_cache = true;
-       return cp;
+       return qr;
     }
 
-    // XXX: nope, check FCC ULS
+    // nope, check FCC ULS
+    if (qr == NULL) {
+       qr = uls_lookup_callsign(callsign);
+    }
+*/
 
-    // XXX: nope, check QRZ XML API
-    qrz_lookup_callsign(callsign);
+    // nope, check QRZ XML API
+    if (qr == NULL) {
+       qr = qrz_lookup_callsign(callsign);
+    }
 
     // only save it in cache if it did not come from there already
     if (!from_cache) {
-       callsign_cache_save(cp);
-       return cp;
+       callsign_cache_save(qr);
+       return qr;
     }
 
     return NULL;
@@ -95,9 +102,19 @@ static void exit_fix_config(void) {
    exit(255);
 }
 
-// dump all the set attributes of a qrz_callsign to the screen
-bool callsign_dump(qrz_callsign_t *callsign) {
-   if (callsign == NULL) {
+// dump all the set attributes of a calldata to the screen
+bool calldata_dump(calldata_t *calldata) {
+   if (calldata == NULL) {
+      return false;
+   }
+
+   if (calldata->callsign[0] == '\0') {
+      if (calldata->query_callsign[0] == '\0') {
+         fprintf(stdout, "404 NOT FOUND %lu %s\n", time(NULL), calldata->query_callsign);
+         log_send(mainlog, LOG_DEBUG, "Lookup for %s failed, not found!\n", calldata->query_callsign);
+      } else {
+         log_send(mainlog, LOG_DEBUG, "Lookup failed: query_callsign unset!");
+      }
       return false;
    }
 
@@ -108,10 +125,82 @@ bool callsign_dump(qrz_callsign_t *callsign) {
    // Lookup for N0CALL was answered by the cache.
    // The answer originally came from QRZ at Mon May  8 06:18:00 AM EDT 2023
    // and will expire (if we go online) at Thu May 11 06:18:00 AM EDT 2023.
-   fprintf(stdout, "200 OK %s ONLINE %lu %s\n", callsign->callsign, time(NULL), "QRZ");
+   fprintf(stdout, "200 OK %s ONLINE %lu QRZ\n", calldata->callsign, time(NULL));
 
    // XXX: Look for properties that aren't NULL and print them nicely for the user
    // XXX: while still being machine friendly!
+   fprintf(stdout, "Callsign: %s\n", calldata->callsign);
+   fprintf(stdout, "Cached: %s\n", (calldata->cached ? "true" : "false"));
+
+   if (calldata->cached) {
+      fprintf(stdout, "Cache-Fetched: %lu\n", calldata->cache_fetched);
+      fprintf(stdout, "Cache-Expiry: %lu\n", calldata->cache_expiry);
+   }
+
+   if (calldata->first_name[0] != '\0') {
+      fprintf(stdout, "Name: %s %c%s %s\n", calldata->first_name, calldata->mi, (calldata->mi != '\0' ? " " : ""), calldata->last_name);
+   }
+
+   if (calldata->alias_count > 0 && (calldata->aliases[0] != '\0')) {
+      fprintf(stdout, "Aliases: %d: %s\n", calldata->alias_count, calldata->aliases);
+   }
+
+   if (calldata->dxcc != 0) {
+      fprintf(stdout, "DXCC: %d\n", calldata->dxcc);
+   }
+
+   if (calldata->email[0] != '\0') {
+      fprintf(stdout, "Email: %s\n", calldata->email);
+   }
+
+   if (calldata->grid[0] != 0) {
+      fprintf(stdout, "Grid: %s\n", calldata->grid);
+   }
+
+   if (calldata->latitude != 0 && calldata->longitude != 0) {
+      fprintf(stdout, "WGS-84: %f, %f\n", calldata->latitude, calldata->longitude);
+   }
+
+   if (calldata->address1[0] != '\0') {
+      fprintf(stdout, "Address1: %s\n", calldata->address1);
+   }
+
+   if (calldata->address_attn[0] != '\0') {
+      fprintf(stdout, "Attn: %s\n", calldata->address_attn);
+   }
+
+   if (calldata->address2[0] != '\0') {
+      fprintf(stdout, "Address2: %s\n", calldata->address2);
+   }
+
+   if (calldata->state[0] != '\0') {
+      fprintf(stdout, "State: %s\n", calldata->state);
+   }
+
+
+   if (calldata->zip[0] != '\0') {
+      fprintf(stdout, "Zip: %s\n", calldata->zip);
+   }
+
+   if (calldata->county[0] != '\0') {
+      fprintf(stdout, "County: %s\n", calldata->county);
+   }
+
+   if (calldata->fips[0] != '\0') {
+      fprintf(stdout, "FIPS: %s\n", calldata->fips);
+   }
+
+   if (calldata->license_effective > 0) {
+      fprintf(stdout, "License Effective: %lu\n", calldata->license_effective);
+   }
+   if (calldata->license_expiry > 0) {
+      fprintf(stdout, "License Expires: %lu\n", calldata->license_expiry);
+   }
+
+   if (calldata->country[0] != '\0') {
+      fprintf(stdout, "Country: %s (%d)\n", calldata->country, calldata->country_code);
+   }
+
    return true;
 }
 
@@ -130,9 +219,9 @@ int main(int argc, char **argv) {
       fprintf(stderr, "logpath not found, defaulting to stderr!\n");
       mainlog = log_open("stderr");
    }
-   log_send(mainlog, LOG_NOTICE, "%s starting up!", progname);
+   log_send(mainlog, LOG_NOTICE, "%s/%s starting up!", progname, VERSION);
 
-   callsign_setup();
+   callsign_lookup_setup();
 
    if (callsign_use_qrz) {
       res = qrz_start_session();
@@ -148,16 +237,22 @@ int main(int argc, char **argv) {
 
    // if called with a callsign, look it up, return the parsed output and exit
    if (argc > 1) {
-      qrz_callsign_t *callsign = callsign_lookup(argv[1]);
+      char *callsign = argv[1];
+      calldata_t *calldata = callsign_lookup(argv[1]);
 
-      if (callsign != NULL) {
-         callsign_dump(callsign);
+      if (calldata == NULL) {
+         fprintf(stdout, "404 callsign %s is unknown\n", callsign);
+         log_send(mainlog, LOG_NOTICE, "Callsign %s was not found in enabled databases.", callsign);
       } else {
-         fprintf(stdout, "404 callsign %s is unknown\n", argv[1]);
-       }
+         calldata_dump(calldata);
+      }
+
+      free(calldata);
+      calldata = NULL;
+
+      // we're done with lookup, exit instead of running the loop ;)
       exit(0);
    }
-
    while(1) {
       sleep(1);
    }

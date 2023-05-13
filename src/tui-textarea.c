@@ -23,7 +23,7 @@ void ta_redraw(TextArea *ta) {
       log_send(mainlog, LOG_CRIT, "ta_redraw: ta (%p) -> scrollback == NULL", ta);
       return;
    }
-#if	0
+#if	1
    ////////////////////////////////////
    // Find the end of the ringbuffer //
    ////////////////////////////////////

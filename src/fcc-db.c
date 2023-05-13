@@ -8,3 +8,14 @@
 #include "config.h"
 #include "sql.h"
 #include "ft8goblin_types.h"
+
+calldata_t *uls_lookup_callsign(const char *callsign) {
+   calldata_t *d = NULL;
+
+   if ((d = malloc(sizeof(calldata_t))) == NULL) {
+      fprintf(stderr, "uls_lookup_callsign: out of memory!\n");
+      exit(ENOMEM);
+   }
+
+   return d;
+}

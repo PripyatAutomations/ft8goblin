@@ -18,7 +18,7 @@ sigcapd_libs += uhd rtlsdr uhd rtlsdr hamlib
 callsign_lookupd_libs := m curl
 
 ERROR_FLAGS := -Werror 
-#SAN_FLAGS := -fsanitize=address
+SAN_FLAGS := -fsanitize=address
 WARN_FLAGS := -Wall -pedantic -Wno-unused-variable -Wno-unused-function #-Wno-missing-braces
 OPT_FLAGS := -O2 -ggdb3
 C_STD := -std=gnu11

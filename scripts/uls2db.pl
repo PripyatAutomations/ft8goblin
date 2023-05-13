@@ -45,9 +45,11 @@ close($counts_fh);
 #die "temp stop\n";
 
 # Delete existing database...
+print "Removing old database $db\n";
 unlink($db);
 
 # And open a fresh one
+print "Opening new database $db\n";
 my $dbh = DBI->connect("dbi:SQLite:dbname=$db", "", "");
 my $sql_buffer = "";
 
@@ -141,6 +143,7 @@ my $en_insert_sql = "INSERT INTO uls_frn (unique_id, callsign, entity_type, lice
    $en_insert_sql .= " linked_license_id, linked_callsign ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
 my $en_insert_stmt = $dbh->prepare($en_insert_sql) or die "Failed preparing EN INSERT statement!\n";
 
+print "Loading FCC ULS datasets\n";
 for my $dataset (@datasets) {
    my $buffer = "";
    my $sqlbuf = "";
@@ -245,6 +248,8 @@ for my $dataset (@datasets) {
    close($data_fh);
 }
 
+print "Creating indexes. This will take awhile...\n";
+
 # moved index creaiton down here to save
 $dbh->do("BEGIN TRANSACTION");
 $dbh->do("CREATE INDEX idx_ham_callsign ON uls_ham (callsign);") or die "create idx_ham_callsign\n";
@@ -262,7 +267,8 @@ $dbh->do("CREATE INDEX idx_frn_zip ON uls_frn (zip_code);") or die "create idx_f
 $dbh->do("CREATE INDEX idx_frn_frn ON uls_frn (frn);") or die "create idx_frn_frn\n";
 $dbh->do("COMMIT");
 
-# XXX: And make sure we got that many entries for each?
+# XXX: Compare counts and make sure we succesfully imported everything
+print "Done!\n";
 
 # Disconnect from database
 $dbh->disconnect();

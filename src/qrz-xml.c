@@ -42,7 +42,7 @@ static void qrz_init_string(qrz_string_t *s) {
   s->ptr[0] = '\0';
 }
 
-bool qrz_parse_http_data(const char *buf, qrz_callsign_t *calldata) {
+bool qrz_parse_http_data(const char *buf, calldata_t *calldata) {
    char *key = NULL, *message = NULL, *error = NULL;
    uint64_t count = 0;
    time_t sub_exp_time = -1, qrz_gmtime = -1;
@@ -50,18 +50,21 @@ bool qrz_parse_http_data(const char *buf, qrz_callsign_t *calldata) {
 
    qrz_session_t *q = qrz_session;
 
+   if (calldata == NULL) {
+      log_send(mainlog, LOG_DEBUG, "qrz_parse_http_data called witn NULL calldata.");
+      return false;
+   }
+
+   // if haven't yet allocated the qrz_session
    if (q == NULL) {
       if ((q = malloc(sizeof(qrz_session_t))) == NULL) {
          fprintf(stderr, "qrz_start_session: out of memory!\n");
          exit(ENOMEM);
       }
       memset(q, 0, sizeof(qrz_session_t));
-
-      if (qrz_session == NULL)
-         qrz_session = q;
-
+      qrz_session = q;
       q->count = -1;
-      q->sub_expiration = 0;
+      q->sub_expiration = -1;
    }
 
    // set last received message time to now
@@ -82,7 +85,7 @@ bool qrz_parse_http_data(const char *buf, qrz_callsign_t *calldata) {
          memset(newkey, 0, key_len + 1);
          snprintf(newkey, key_len + 1, "%s", key);
             
-         log_send(mainlog, LOG_DEBUG, "qrz_xml_api: Got session key: %s, key_len: %lu", newkey, key_len);
+//         log_send(mainlog, LOG_DEBUG, "qrz_xml_api: Got session key: %s, key_len: %lu", newkey, key_len);
          // XXX: In theory, this will be slightly less CPU cycles in the frequent case the key is unchanged.
          // We need to deal with the case of QRZ returning a new key when one expires during a lookup, however...
          if (strncmp(q->key, newkey, MAX(key_len, strlen(q->key))) != 0) {
@@ -174,31 +177,172 @@ bool qrz_parse_http_data(const char *buf, qrz_callsign_t *calldata) {
          log_send(mainlog, LOG_CRIT, "QRZ subscription expires within 7 days (%d days), you really should renew soon...", (mynow - q->sub_expiration) / 86400);
       }
       if (!already_logged_in) {
-         log_send(mainlog, LOG_INFO, "Logged into QRZ. Your subscription expires %s. You've used %d queries today.", datebuf, q->count);
+         log_send(mainlog, LOG_INFO, "Logged into QRZ. Your subscription expires %s. You've used %d queries.", datebuf, q->count);
          already_logged_in = true;
       }
    }
 
    ////////////
-   if (calldata != NULL) {
-      // XXX: Check and make sure this is wrapped in <QRZDatabase>
-      char *callsign = strstr(buf, "<Callsign>");
-      if (callsign != NULL) { 			// we got a valid callsign reply
-         callsign += 10;
-         char *callsign_end = strstr(callsign, "</Callsign>");
-         size_t callsign_len = (callsign_end - callsign);
+   // XXX: Check and make sure this is wrapped in <QRZDatabase>
+   char *callsign = strstr(buf, "<Callsign>");
+   if (callsign != NULL) { 			// we got a valid callsign reply
+      callsign += 10;
+      char *callsign_end = strstr(callsign, "</Callsign>");
+      size_t callsign_len = (callsign_end - callsign);
 
-         // XXX: it should be a good bit larger if valid.. figure out minimal valid size..
-         if (callsign_len >= 10) {
-            char new_calldata[callsign_len + 1];
-            memset(new_calldata, 0, callsign_len + 1);
-            snprintf(new_calldata, callsign_len, "%s", callsign);
-            log_send(mainlog, LOG_INFO, "Got Callsign data <%lu bytes>: %s", callsign_len, new_calldata);
-            /* Here we need to break out the fields and apply them to their respective parts of the qrz_callsign_t */
-            return true;
+      // XXX: it should be a good bit larger if valid.. figure out minimal valid size..
+      if (callsign_len >= 10) {
+         char new_calldata[callsign_len + 1];
+         memset(new_calldata, 0, callsign_len + 1);
+         snprintf(new_calldata, callsign_len, "%s", callsign);
+         log_send(mainlog, LOG_INFO, "Got Callsign data <%lu bytes>: %s", callsign_len, new_calldata);
+
+         /* Here we need to break out the fields and apply them to their respective parts of the calldata_t */
+         char *call = strstr(buf, "<call>") + 6;
+         if (call != NULL) {
+            char *call_end = strstr(call, "</call>");
+            size_t call_len = (call_end - call);
+            memcpy(calldata->callsign, call, call_len);
          }
-      } else {
-         log_send(mainlog, LOG_DEBUG, "calldata NULL");
+
+         char *dxcc = strstr(buf, "<dxcc>") + 6;
+         if (dxcc != NULL) {
+            char *dxcc_end = strstr(dxcc, "</dxcc>");
+            size_t dxcc_len = (dxcc_end - dxcc);
+            char dxcc_buf[dxcc_len + 1];
+            memset(dxcc_buf, 0, dxcc_len + 1);
+            calldata->dxcc = atoi(dxcc);
+         }
+
+         char *aliases = strstr(buf, "<aliases>") + 9;
+         if (aliases != NULL) {
+            char *aliases_end = strstr(aliases, "</aliases>");
+            size_t aliases_len = (aliases_end - aliases);
+            memcpy(calldata->aliases, aliases, aliases_len);
+         }
+
+         char *fname = strstr(buf, "<fname>") + 7;
+         if (fname != NULL) {
+            char *fname_end = strstr(fname, "</fname>");
+            size_t fname_len = (fname_end - fname);
+            memcpy(calldata->first_name, fname, fname_len);
+         }
+
+         char *name = strstr(buf, "<name>") + 6;
+         if (name != NULL) {
+            char *name_end = strstr(name, "</name>");
+            size_t name_len = (name_end - name);
+            memcpy(calldata->last_name, name, name_len);
+         }
+
+         char *addr1 = strstr(buf, "<addr1>") + 7;
+         if (addr1 != NULL) {
+            char *addr1_end = strstr(addr1, "</addr1>");
+            size_t addr1_len = (addr1_end - addr1);
+            memcpy(calldata->address1, addr1, addr1_len);
+         }
+
+         char *addr2 = strstr(buf, "<addr2>") + 7;
+         if (addr2 != NULL) {
+            char *addr2_end = strstr(addr2, "</addr2>");
+            size_t addr2_len = (addr2_end - addr2);
+            memcpy(calldata->address2, addr2, addr2_len);
+         }
+
+         char *state = strstr(buf, "<state>") + 7;
+         if (state != NULL) {
+            char *state_end = strstr(state, "</state>");
+            size_t state_len = (state_end - state);
+            memcpy(calldata->state, state, state_len);
+         }
+
+         char *zip = strstr(buf, "<zip>") + 5;
+         if (zip != NULL) {
+            char *zip_end = strstr(zip, "</zip>");
+            size_t zip_len = (zip_end - zip);
+            memcpy(calldata->zip, zip, zip_len);
+         }
+
+         char *grid = strstr(buf, "<grid>") + 6;
+         if (grid != NULL) {
+            char *grid_end = strstr(grid, "</grid>");
+            size_t grid_len = (grid_end - grid);
+            memcpy(calldata->grid, grid, grid_len);
+         }
+ 
+         char *country = strstr(buf, "<country>") + 9;
+         if (country != NULL) {
+            char *country_end = strstr(country, "</country>");
+            size_t country_len = (country_end - country);
+            memcpy(calldata->country, country, country_len);
+         }
+
+         char *lat = strstr(buf, "<lat>");
+         if (lat != NULL) {
+            lat += 5;
+            char *lat_end = strstr(lat, "</lat>");
+            size_t lat_len = (lat_end - lat);
+            char lat_buf[lat_len + 1];
+            memset(lat_buf, 0, lat_len + 1);
+            memcpy(lat_buf, lat, lat_len);
+            calldata->latitude = atof(lat_buf);
+         } else {
+            fprintf(stderr, "lat: NULL");
+         }
+
+         char *lon = strstr(buf, "<lon>");
+         if (lon != NULL) {
+            lon += 5;
+            char *lon_end = strstr(lon, "</lon>");
+            size_t lon_len = (lon_end - lon);
+            char lon_buf[lon_len + 1];
+            memset(lon_buf, 0, lon_len + 1);
+            memcpy(lon_buf, lon, lon_len);
+            calldata->longitude = atof(lon_buf);
+         } else {
+            fprintf(stderr, "lat: NULL");
+         }
+
+         char *county = strstr(buf, "<county>") + 8;
+         if (county != NULL) {
+            char *county_end = strstr(county, "</county>");
+            size_t county_len = (county_end - county);
+            memcpy(calldata->county, county, county_len);
+         }
+
+         char *class = strstr(buf, "<class>") + 7;
+         if (class != NULL) {
+            char *class_end = strstr(class, "</class>");
+            size_t class_len = (class_end - class);
+            memcpy(calldata->opclass, class, class_len);
+         }
+
+         char *codes = strstr(buf, "<codes>") + 7;
+         if (codes != NULL) {
+            char *codes_end = strstr(codes, "</codes>");
+            size_t codes_len = (codes_end - codes);
+            memcpy(calldata->codes, codes, codes_len);
+         }
+
+         char *email = strstr(buf, "<email>") + 7;
+         if (email != NULL) {
+            char *email_end = strstr(email, "</email>");
+            size_t email_len = (email_end - email);
+            memcpy(calldata->email, email, email_len);
+         }
+         char *u_views = strstr(buf, "<u_views>") + 7;
+         if (u_views != NULL) {
+            char *u_views_end = strstr(u_views, "</u_views>");
+            size_t u_views_len = (u_views_end - u_views);
+            char u_views_buf[u_views_len + 1];
+            memset(u_views_buf, 0, u_views_len + 1);
+            memcpy(u_views_buf, u_views, u_views_len);
+         }
+
+//<efdate>2021-07-17</efdate>
+//<expdate>2031-07-17</expdate>
+
+         return true;
       }
    }
    // if we fell through to here, we were not succesful...
@@ -320,7 +464,8 @@ bool qrz_start_session(void) {
    // send the request, once it completes, we should have all the data
    if (http_post(buf, NULL, outbuf, sizeof(outbuf)) != false) {
 //      log_send(mainlog, LOG_DEBUG, "sending %lu bytes to parser <%s>", strlen(outbuf), outbuf);
-      qrz_parse_http_data(outbuf, NULL);
+      calldata_t calldata;
+      qrz_parse_http_data(outbuf, &calldata);
 
       // reset the failure counter...
       qrz_login_tries = 0;
@@ -336,9 +481,9 @@ bool qrz_start_session(void) {
    return false;
 }
 
-bool qrz_lookup_callsign(const char *callsign) {
+calldata_t *qrz_lookup_callsign(const char *callsign) {
    char buf[32769], outbuf[32769];
-   qrz_callsign_t *calldata = malloc(sizeof(qrz_callsign_t));
+   calldata_t *calldata = malloc(sizeof(calldata_t));
 
    if (calldata == NULL) {
       fprintf(stderr, "qrz_lookup_callsign: out of memory!\n");
@@ -351,18 +496,16 @@ bool qrz_lookup_callsign(const char *callsign) {
       return false;
    }
 
+   memset(calldata, 0, sizeof(calldata_t));
    memset(buf, 0, sizeof(buf));
    snprintf(buf, sizeof(buf), "%s?s=%s;callsign=%s", qrz_api_url, qrz_session->key, callsign);
 
+   memcpy(calldata->query_callsign, callsign, MAX_CALLSIGN);
    log_send(mainlog, LOG_INFO, "looking up callsign %s via QRZ XML API", callsign);
 
    if (http_post(buf, NULL, outbuf, sizeof(outbuf)) != false) {
-      memset(outbuf, 0, 32769);
-      log_send(mainlog, LOG_DEBUG, "calldata: %p", calldata);
       qrz_parse_http_data(outbuf, calldata);
-      log_send(mainlog, LOG_DEBUG, "calldata: %p", calldata);
    }
-   free(calldata);
 
-   return true;
+   return calldata;
 }

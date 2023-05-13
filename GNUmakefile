@@ -20,7 +20,6 @@ tui_objs += tui.o tui-help.o tui-input.o tui-keymap.o tui-menu.o tui-textarea.o
 
 ft8goblin_objs += ${tui_objs} 	# text user interface
 ft8goblin_objs += adif.o	# ADIF logs
-ft8goblin_objs += fcc-db.o	# FCC ULS database
 ft8goblin_objs += ft8goblin.o	# main TUI program
 ft8goblin_objs += hamlib.o	# hamlib (rigctld) interface
 ft8goblin_objs += subproc.o	# subprocess management
@@ -45,6 +44,7 @@ flac_streamerd_objs += ringbuffer.o
 flac_streamerd_objs += util.o
 
 callsign_lookupd_objs += callsign-lookupd.o
+callsign_lookupd_objs += fcc-db.o
 callsign_lookupd_objs += gnis-lookup.o	# place names database
 callsign_lookupd_objs += qrz-xml.o	# QRZ XML API callsign lookups (paid)
 callsign_lookupd_objs += sql.o
