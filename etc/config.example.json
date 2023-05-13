@@ -16,7 +16,7 @@
       "encoderd-ft8-loglevel": "notice",
       "encoderd-ft8-logpath": "file://logs/encoderd-ft8.%b.log",
       "encoderd-ft8-pidfile": "file://run/encoderd-ft8.%b.pid",
-      "sigcapd-loglevel": "warning",
+      "sigcapd-loglevel": "debug",
       "sigcapd-logpath": "file://logs/sigcapd.log",
       "sigcapd-pidfile": "file://run/sigcapd.%b.pid",
       "ft8goblin-loglevel": "debug",

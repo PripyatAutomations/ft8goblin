@@ -601,7 +601,7 @@ int main(int argc, char **argv) {
    } else {
       log_open("stderr");
    }
-   log_send(mainlog, LOG_NOTICE, "ft8goblin starting up!");
+   log_send(mainlog, LOG_NOTICE, "ft8goblin/%s starting up!", VERSION);
 
    // setup the TUI toolkit
    tui_init();

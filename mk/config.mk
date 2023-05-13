@@ -13,6 +13,7 @@ lib_install_path := ${PREFIX}/lib
 common_libs += yajl ev
 ft8goblin_libs += ncurses termbox2 hamlib m
 ft8coder_libs += m
+flac_streamerd_libs +=
 sigcapd_libs += uhd rtlsdr uhd rtlsdr hamlib
 callsign_lookupd_libs := m curl
 
@@ -33,6 +34,7 @@ ft8goblin_ldflags := ${LDFLAGS} $(foreach x,${ft8goblin_libs},-l${x})
 ft8coder_ldflags := ${LDFLAGS} $(foreach x,${ft8coder_libs},-l${x})
 ft8coder_ldflags += -lft8
 sigcapd_ldflags := ${LDFLAGS} $(foreach x,${sigcapd_libs},-l${x})
+flac_streamerd_ldflags := ${LDFLAGS} $(foreach x,${flac_streamerd_libs},-l${x})
 callsign_lookupd_ldflags := ${LDFLAGS} $(foreach x,${callsign_lookupd_libs},-l${x})
 # Adjust for build-time options
 ifeq (${ALSA},y)

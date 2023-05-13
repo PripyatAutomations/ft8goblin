@@ -3,7 +3,8 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#define	MAX_SUBPROC	64
+#define	MAX_SUBPROC	128			// i doubt we'll ever reach this limit, but it'd be cool if we could (that's a lot of bands!)
+
 #ifdef __cplusplus
 extern "C" {
 #endif

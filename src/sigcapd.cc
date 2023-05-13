@@ -35,11 +35,13 @@ int main(int argc, char **argv) {
       exit_fix_config();
    }
 
-   if ((logpath = dict_get(runtime_cfg, "logpath", "file://ft8goblin.log")) != NULL) {
+   if ((logpath = dict_get(runtime_cfg, "logpath", "file://sigcapd.log")) != NULL) {
       mainlog = log_open(logpath);
    } else {
       log_open("stderr");
    }
+
+   log_send(mainlog, LOG_NOTICE, "sigcapd/%s starting up!", VERSION);
 
    while(1) {
       sleep(1);

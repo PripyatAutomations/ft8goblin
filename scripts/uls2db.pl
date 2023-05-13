@@ -21,6 +21,7 @@ my $dataset_errors = 0;
 my $dataset_warnings = 0;
 my $data_dir = "data-sources/fcc-uls/fcc_uls_amateur";
 
+print "Parsing upstream counts...\n";
 open(my $counts_fh, "<", "$data_dir/counts") or die "Cannot open ULS counts: $data_dir/counts: $!";
 my $lines = 0;
 while (my $line = <$counts_fh>) {
@@ -41,7 +42,7 @@ while (my $line = <$counts_fh>) {
 }
 close($counts_fh);
 
-die "temp stop\n";
+#die "temp stop\n";
 
 # Delete existing database...
 unlink($db);
