@@ -11,6 +11,8 @@ These are not in any particular order, but stuff near the bottom is probably far
 * Rework the key binding help to be derived from the active keymap, so it
   updates keys available as you move around the program
 * Waterfall window
+* Should we make it so the callsign lookup window (pane 2) can be other
+   windows too such as waterfall?
 * Work on database logging
 * Complete ft8decoder using ft8lib for ft4 and ft8
 * Get messages displaying in ft8goblin from test samples sent to ft8decoder processes
