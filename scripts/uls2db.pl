@@ -1,5 +1,4 @@
 #!/usr/bin/perl
-# Why this so slow? :(
 # Anyways, here we import already downloaded and unpacked FCC ULS (Universal License System) records for ham and GMRS into SQL.
 # XXX: ToDo - Finish the code for confirming the counts after finished
 # It looks like we may need to import a lot more than we just AM and EN 
@@ -15,6 +14,34 @@ STDOUT->autoflush(1);
 # XXX: Read this from etc/config.json (/etc/ft8goblin too) - cfg:callsign-lookup/fcc-uls-db
 my $db = "etc/fcc-uls.db";
 my $sqlfile = "sql/fcc-uls.sql";
+#
+my @datasets = ( "AM", "EN" );			# the data in "CO", "EN", "HD", "HS", "LA", "SC", "SF" aren't really important..
+my @dataset_counts = { };
+my $dataset_errors = 0;
+my $dataset_warnings = 0;
+my $data_dir = "data-sources/fcc-uls/fcc_uls_amateur";
+
+open(my $counts_fh, "<", "$data_dir/counts") or die "Cannot open ULS counts: $data_dir/counts: $!";
+my $lines = 0;
+while (my $line = <$counts_fh>) {
+   $lines++;
+
+   # skip the first line, it's a header...
+   if ($lines == 1) {
+      next;
+   }
+
+   my @exploded = split(" ", $line);
+   print "0: " . $exploded[0] . " 1: " . $exploded[1] . "\n";
+   my $cnt = $exploded[0];
+   my @f = split("/", $exploded[1]);
+   my $fn = $f[1];
+#   $dataset_counts[$fn] = $cnt;
+#   print "fn: $fn has $cnt entries\n";
+}
+close($counts_fh);
+
+die "temp stop\n";
 
 # Delete existing database...
 unlink($db);
@@ -94,30 +121,10 @@ my $create_uls_ham_stmt = $dbh->prepare($sql_create_uls_ham) or die "create_uls_
 $create_uls_ham_stmt->execute() or die "create_uls_ham_stmt: execute\n";
 my $create_uls_frn_stmt = $dbh->prepare($sql_create_uls_frn) or die "create_uls_frn_stmt: prepare faile\n";
 $create_uls_frn_stmt->execute() or die "create_uls_frn_stmt: execute\n";
-$dbh->do("BEGIN TRANSACTION");
-$dbh->do("CREATE INDEX idx_ham_callsign ON uls_ham (callsign);") or die "create idx_ham_callsign\n";
-$dbh->do("CREATE INDEX idx_ham_unique_sys_id ON uls_ham (unique_id);") or die "create idx_ham_unique_sys_id\n";
-$dbh->do("CREATE INDEX idx_ham_uls_file_number ON uls_ham (uls_file_number);") or die "create idx_ham_uls_file_number\n";
-$dbh->do("CREATE INDEX idx_frn_unique_sys_id ON uls_frn (unique_id);") or die "create idx_frn_unique_sys_id\n";
-$dbh->do("CREATE INDEX idx_frn_file_number ON uls_frn (uls_file_number);") or die "create idx_frn_file_number\n";
-$dbh->do("CREATE INDEX idx_frn_fname ON uls_frn (first_name);") or die "create idx_frn_fname\n";
-$dbh->do("CREATE INDEX idx_frn_lname ON uls_frn (last_name);") or die "create idx_frn_lname\n";
-$dbh->do("CREATE INDEX idx_frn_entity_name ON uls_frn (entity_name);") or die "create idx_frn_entity_name\n";
-$dbh->do("CREATE INDEX idx_frn_street_addr ON uls_frn (street_address);") or die "create idx_frn_street_addr\n";
-$dbh->do("CREATE INDEX idx_frn_city ON uls_frn (city);") or die "create idx_frn_city\n";
-$dbh->do("CREATE INDEX idx_frn_state ON uls_frn (state);") or die "create idx_frn_state\n";
-$dbh->do("CREATE INDEX idx_frn_zip ON uls_frn (zip_code);") or die "create idx_frn_zip\n";
-$dbh->do("CREATE INDEX idx_frn_frn ON uls_frn (frn);") or die "create idx_frn_frn\n";
-$dbh->do("COMMIT");
 
 ####################################
 # Import the various records sets: #
 ####################################
-my @datasets = ( "AM", "EN" );			# the data in "CO", "EN", "HD", "HS", "LA", "SC", "SF" aren't really important..
-my $dataset_counts = { };
-my $dataset_errors = { };
-my $dataset_warnings = { };
-my $data_dir = "data-sources/fcc-uls/fcc_uls_amateur";
 
 # SQL statements used below, prepared once for efficiency...
 my $am_insert_sql = "INSERT INTO uls_ham (unique_id, uls_file_number, ebf_number, callsign, operator_class, group_code, ";
@@ -237,24 +244,22 @@ for my $dataset (@datasets) {
    close($data_fh);
 }
 
-# XXX: We need to load the counts file
-#open(my $counts_fh, "<", "$data_dir/counts") or die "Cannot open ULS counts: $file: $!";
-#my $lines = 0;
-#while (my $line = <$counts_fh>) {
-#   $lines++;
-#
-#   # skip the first line, it's a header...
-#   if ($lines == 1) {
-#      next;
-#   }
-#
-#   my $exploded = split(" ", $line);
-#   my $fn = $exploded[1];
-#   my $cnt = $exploded[0];
-#   $dataset_counts[$fn] = $cnt;
-#   die "fn: $fn has $cnt entries\n";
-#}
-#close($counts_fh);
+# moved index creaiton down here to save
+$dbh->do("BEGIN TRANSACTION");
+$dbh->do("CREATE INDEX idx_ham_callsign ON uls_ham (callsign);") or die "create idx_ham_callsign\n";
+$dbh->do("CREATE INDEX idx_ham_unique_sys_id ON uls_ham (unique_id);") or die "create idx_ham_unique_sys_id\n";
+$dbh->do("CREATE INDEX idx_ham_uls_file_number ON uls_ham (uls_file_number);") or die "create idx_ham_uls_file_number\n";
+$dbh->do("CREATE INDEX idx_frn_unique_sys_id ON uls_frn (unique_id);") or die "create idx_frn_unique_sys_id\n";
+$dbh->do("CREATE INDEX idx_frn_file_number ON uls_frn (uls_file_number);") or die "create idx_frn_file_number\n";
+$dbh->do("CREATE INDEX idx_frn_fname ON uls_frn (first_name);") or die "create idx_frn_fname\n";
+$dbh->do("CREATE INDEX idx_frn_lname ON uls_frn (last_name);") or die "create idx_frn_lname\n";
+$dbh->do("CREATE INDEX idx_frn_entity_name ON uls_frn (entity_name);") or die "create idx_frn_entity_name\n";
+$dbh->do("CREATE INDEX idx_frn_street_addr ON uls_frn (street_address);") or die "create idx_frn_street_addr\n";
+$dbh->do("CREATE INDEX idx_frn_city ON uls_frn (city);") or die "create idx_frn_city\n";
+$dbh->do("CREATE INDEX idx_frn_state ON uls_frn (state);") or die "create idx_frn_state\n";
+$dbh->do("CREATE INDEX idx_frn_zip ON uls_frn (zip_code);") or die "create idx_frn_zip\n";
+$dbh->do("CREATE INDEX idx_frn_frn ON uls_frn (frn);") or die "create idx_frn_frn\n";
+$dbh->do("COMMIT");
 
 # XXX: And make sure we got that many entries for each?
 

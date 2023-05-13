@@ -125,7 +125,7 @@ void tui_resize_window(struct tb_event *evt) {
 
 void tui_shutdown(void) {
    // Tear down to exit
-   dying = 1;
+   dying = true;
 
    // display a notice that we are exiting and to be patient...
    tb_clear();

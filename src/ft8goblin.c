@@ -582,6 +582,7 @@ void redraw_screen(void) {
 }
 
 int main(int argc, char **argv) {
+   const char *logpath = NULL;
    struct ev_loop *loop = EV_DEFAULT;
 
    // print this even though noone will see it, except in case of error exit ;)
@@ -595,8 +596,7 @@ int main(int argc, char **argv) {
    mycall = cfg_get_str(cfg, "site/mycall");
    gridsquare = cfg_get_str(cfg, "site/gridsquare");
 
-   const char *logpath = dict_get(runtime_cfg, "logpath", "file://ft8goblin.log");
-   if (logpath != NULL) {
+   if ((logpath = dict_get(runtime_cfg, "logpath", "file://ft8goblin.log")) != NULL) {
       mainlog = log_open(logpath);
    } else {
       log_open("stderr");
@@ -622,11 +622,13 @@ int main(int argc, char **argv) {
    // Set up IPC
 
    // Start supervising subprocesses:
+   //	sigcapd (one instance)
    //	ft8capture (single instance per device)
         // XXX: Walk the tree at cfg:devices
         // XXX: Walk the tree at cfg:bands
+        // XXX: Figure out which bands can be connected to which devices and start slicers in sigcapd
    //	ft8decoder (one per band)
-   // 	callsign-lookupd (one thread)
+   // 	callsign-lookupd (one instance)
 //        subproc_start()
 
    // main loop...
@@ -635,7 +637,7 @@ int main(int argc, char **argv) {
       ev_run (loop, 0);
 
       // if ev loop exits, we need to die..
-      dying = 1;
+      dying = true;
    }
 
    tui_shutdown();
@@ -671,7 +673,6 @@ void toggle_tx_mode(void) {
       tx_mode++;
    }
 
-   // XXX: we should make a function to turn these to names...
    log_send(mainlog, LOG_INFO, "Toggled TX mode to %s", get_mode_name(tx_mode));
    redraw_screen();
 }
@@ -680,7 +681,7 @@ void toggle_tx_mode(void) {
 // Menus //
 ///////////
 int view_config(void) {
-   // XXX: Show the yajl config tree as a scrollable 'menu', without editing
+   // XXX: Show the yajl config tree as a scrollable 'menu'
    return 0;
 }
 

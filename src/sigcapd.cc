@@ -21,10 +21,31 @@
 #include "uhd.h"
 #include "util.h"
 
-int dying = 0;
+bool dying = false;
 const char *progname = "sigcapd";
+static void exit_fix_config(void) {
+   printf("Please edit your config.json and try again!\n");
+   exit(255);
+}
 
 int main(int argc, char **argv) {
-   fprintf(stderr, "sigcapd doesn't exist yet but will soon!\n");
+   const char *logpath = NULL;
+
+   if (!(cfg = load_config())) {
+      exit_fix_config();
+   }
+
+   if ((logpath = dict_get(runtime_cfg, "logpath", "file://ft8goblin.log")) != NULL) {
+      mainlog = log_open(logpath);
+   } else {
+      log_open("stderr");
+   }
+
+   while(1) {
+      sleep(1);
+   }
+   log_close(mainlog);
+   mainlog = NULL;
+
    return 0;
 }

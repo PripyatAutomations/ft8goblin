@@ -328,7 +328,7 @@ void tui_process_input(struct tb_event *evt) {
       } else if (evt->key == TB_KEY_CTRL_X || evt->key == TB_KEY_CTRL_Q) {	// is it ^X or ^Q? If so exit
          ta_printf(msgbox, "$RED$Goodbye! Hope you had a nice visit!");
          log_send(mainlog, LOG_NOTICE, "ft8goblin shutting down...");
-         dying = 1;
+         dying = true;
          tui_shutdown();
          exit(0);
          return;

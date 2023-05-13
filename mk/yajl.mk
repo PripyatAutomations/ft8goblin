@@ -1,3 +1,6 @@
+yajl_cflags += $(pkgconf --cflags yajl)
+yajl_ldflags += $(pkgconf --ldflags yajl)
+
 yajl_lib_ver := 2.1.1
 yajl := lib/libyajl.so
 
