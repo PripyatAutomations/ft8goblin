@@ -266,7 +266,7 @@ bool qrz_parse_http_data(const char *buf, calldata_t *calldata) {
 
          char *zip = strstr(buf, "<zip>");
          if (zip != NULL) {
-            state += 5;
+            zip += 5;
             char *zip_end = strstr(zip, "</zip>");
             size_t zip_len = (zip_end - zip);
             memcpy(calldata->zip, zip, zip_len);
