@@ -198,15 +198,17 @@ bool qrz_parse_http_data(const char *buf, calldata_t *calldata) {
 //         log_send(mainlog, LOG_INFO, "Got Callsign data <%lu bytes>: %s", callsign_len, new_calldata);
 
          /* Here we need to break out the fields and apply them to their respective parts of the calldata_t */
-         char *call = strstr(buf, "<call>") + 6;
+         char *call = strstr(buf, "<call>");
          if (call != NULL) {
+            call += 6;
             char *call_end = strstr(call, "</call>");
             size_t call_len = (call_end - call);
             memcpy(calldata->callsign, call, call_len);
          }
 
-         char *dxcc = strstr(buf, "<dxcc>") + 6;
+         char *dxcc = strstr(buf, "<dxcc>");
          if (dxcc != NULL) {
+            dxcc += 6;
             char *dxcc_end = strstr(dxcc, "</dxcc>");
             size_t dxcc_len = (dxcc_end - dxcc);
             char dxcc_buf[dxcc_len + 1];
@@ -214,64 +216,73 @@ bool qrz_parse_http_data(const char *buf, calldata_t *calldata) {
             calldata->dxcc = atoi(dxcc);
          }
 
-         char *aliases = strstr(buf, "<aliases>") + 9;
+         char *aliases = strstr(buf, "<aliases>");
          if (aliases != NULL) {
+            aliases += 9;
             char *aliases_end = strstr(aliases, "</aliases>");
             size_t aliases_len = (aliases_end - aliases);
             memcpy(calldata->aliases, aliases, aliases_len);
          }
 
-         char *fname = strstr(buf, "<fname>") + 7;
+         char *fname = strstr(buf, "<fname>");
          if (fname != NULL) {
+            fname += 7;
             char *fname_end = strstr(fname, "</fname>");
             size_t fname_len = (fname_end - fname);
             memcpy(calldata->first_name, fname, fname_len);
          }
 
-         char *name = strstr(buf, "<name>") + 6;
+         char *name = strstr(buf, "<name>");
          if (name != NULL) {
+            name += 6;
             char *name_end = strstr(name, "</name>");
             size_t name_len = (name_end - name);
             memcpy(calldata->last_name, name, name_len);
          }
 
-         char *addr1 = strstr(buf, "<addr1>") + 7;
+         char *addr1 = strstr(buf, "<addr1>");
          if (addr1 != NULL) {
+            addr1 += 7;
             char *addr1_end = strstr(addr1, "</addr1>");
             size_t addr1_len = (addr1_end - addr1);
             memcpy(calldata->address1, addr1, addr1_len);
          }
 
-         char *addr2 = strstr(buf, "<addr2>") + 7;
+         char *addr2 = strstr(buf, "<addr2>");
          if (addr2 != NULL) {
+            addr2 += 7;
             char *addr2_end = strstr(addr2, "</addr2>");
             size_t addr2_len = (addr2_end - addr2);
             memcpy(calldata->address2, addr2, addr2_len);
          }
 
-         char *state = strstr(buf, "<state>") + 7;
+         char *state = strstr(buf, "<state>");
          if (state != NULL) {
+            state += 7;
             char *state_end = strstr(state, "</state>");
             size_t state_len = (state_end - state);
             memcpy(calldata->state, state, state_len);
          }
 
-         char *zip = strstr(buf, "<zip>") + 5;
+         char *zip = strstr(buf, "<zip>");
          if (zip != NULL) {
+            state += 5;
             char *zip_end = strstr(zip, "</zip>");
             size_t zip_len = (zip_end - zip);
             memcpy(calldata->zip, zip, zip_len);
          }
 
-         char *grid = strstr(buf, "<grid>") + 6;
+         char *grid = strstr(buf, "<grid>");
          if (grid != NULL) {
+            grid += 6;
             char *grid_end = strstr(grid, "</grid>");
             size_t grid_len = (grid_end - grid);
             memcpy(calldata->grid, grid, grid_len);
          }
  
-         char *country = strstr(buf, "<country>") + 9;
+         char *country = strstr(buf, "<country>");
          if (country != NULL) {
+            country += 9;
             char *country_end = strstr(country, "</country>");
             size_t country_len = (country_end - country);
             memcpy(calldata->country, country, country_len);
@@ -303,35 +314,40 @@ bool qrz_parse_http_data(const char *buf, calldata_t *calldata) {
             fprintf(stderr, "lat: NULL");
          }
 
-         char *county = strstr(buf, "<county>") + 8;
+         char *county = strstr(buf, "<county>");
          if (county != NULL) {
+            county += 8;
             char *county_end = strstr(county, "</county>");
             size_t county_len = (county_end - county);
             memcpy(calldata->county, county, county_len);
          }
 
-         char *class = strstr(buf, "<class>") + 7;
+         char *class = strstr(buf, "<class>");
          if (class != NULL) {
+            class += 7;
             char *class_end = strstr(class, "</class>");
             size_t class_len = (class_end - class);
             memcpy(calldata->opclass, class, class_len);
          }
 
-         char *codes = strstr(buf, "<codes>") + 7;
+         char *codes = strstr(buf, "<codes>");
          if (codes != NULL) {
+            codes += 7;
             char *codes_end = strstr(codes, "</codes>");
             size_t codes_len = (codes_end - codes);
             memcpy(calldata->codes, codes, codes_len);
          }
 
-         char *email = strstr(buf, "<email>") + 7;
+         char *email = strstr(buf, "<email>");
          if (email != NULL) {
+            email += 7;
             char *email_end = strstr(email, "</email>");
             size_t email_len = (email_end - email);
             memcpy(calldata->email, email, email_len);
          }
-         char *u_views = strstr(buf, "<u_views>") + 7;
+         char *u_views = strstr(buf, "<u_views>");
          if (u_views != NULL) {
+            u_views += 7;
             char *u_views_end = strstr(u_views, "</u_views>");
             size_t u_views_len = (u_views_end - u_views);
             char u_views_buf[u_views_len + 1];
