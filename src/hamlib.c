@@ -133,7 +133,7 @@ Hamlib *hamlib_open(int model, const char *path, int baudrate) {
                                14074000, RIG_MODE_USB);
 
    if (rig->status != RIG_OK) {
-      rig_debug(RIG_DEBUG_ERR, "hamlib_init: error rig_get_ragne: %s\n", rigerror(rig->status));
+      rig_debug(RIG_DEBUG_ERR, "hamlib_init: error rig_get_range: %s\n", rigerror(rig->status));
    }
 
    if (range) {

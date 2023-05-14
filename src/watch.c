@@ -71,7 +71,7 @@ int watchlist_load(const char *path) {
    FILE *fp = NULL;
 
    if ((fp = fopen(path, "r")) == NULL) {
-      log_send(mainlog, LOG_CRIT, "watchlist_loads: Failed opening %s: %d:%s\n", path, errno, strerror(errno));
+      log_send(mainlog, LOG_CRIT, "watchlist_load: Failed opening %s: %d:%s\n", path, errno, strerror(errno));
       return -errno;
    }
 

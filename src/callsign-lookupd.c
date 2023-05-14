@@ -276,7 +276,6 @@ int main(int argc, char **argv) {
    }
 
    while(!dying) {
-      fprintf(stderr, "CHICKEN!\n");
       ev_run(loop, 0);
 
       // if ev loop exits, we need to die..

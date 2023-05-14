@@ -298,7 +298,7 @@ bool qrz_parse_http_data(const char *buf, calldata_t *calldata) {
             memcpy(lat_buf, lat, lat_len);
             calldata->latitude = atof(lat_buf);
          } else {
-            fprintf(stderr, "lat: NULL");
+            fprintf(stderr, "lat: NULL\n");
          }
 
          char *lon = strstr(buf, "<lon>");
@@ -311,7 +311,7 @@ bool qrz_parse_http_data(const char *buf, calldata_t *calldata) {
             memcpy(lon_buf, lon, lon_len);
             calldata->longitude = atof(lon_buf);
          } else {
-            fprintf(stderr, "lat: NULL");
+            fprintf(stderr, "lat: NULL\n");
          }
 
          char *county = strstr(buf, "<county>");
