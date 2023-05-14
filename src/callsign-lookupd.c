@@ -29,6 +29,7 @@ static bool callsign_use_uls = false, callsign_use_qrz = false, callsign_initial
 // common shared things for our library
 const char *progname = "callsign-lookupd";
 bool dying = 0;
+time_t now = -1;
 
 // Load the configuration (cfg_get_str(...)) into *our* configuration locals
 static void callsign_lookup_setup(void) {
@@ -101,17 +102,19 @@ static void exit_fix_config(void) {
 }
 
 // dump all the set attributes of a calldata to the screen
-bool calldata_dump(calldata_t *calldata) {
+bool calldata_dump(calldata_t *calldata, const char *callsign) {
    if (calldata == NULL) {
       return false;
    }
 
    if (calldata->callsign[0] == '\0') {
       if (calldata->query_callsign[0] == '\0') {
-         fprintf(stdout, "404 NOT FOUND %lu %s\n", time(NULL), calldata->query_callsign);
+         fprintf(stdout, "404 NOT FOUND %lu %s\n", now, calldata->query_callsign);
          log_send(mainlog, LOG_DEBUG, "Lookup for %s failed, not found!\n", calldata->query_callsign);
-      } else {
+      } else if (callsign == NULL) {
          log_send(mainlog, LOG_DEBUG, "Lookup failed: query_callsign unset!");
+      } else {
+         fprintf(stdout, "404 NOT FOUND %lu %s\n", now, callsign);
       }
       return false;
    }
@@ -133,7 +136,7 @@ bool calldata_dump(calldata_t *calldata) {
    }
 
    if (calldata->first_name[0] != '\0') {
-      fprintf(stdout, "Name: %s %c%s %s\n", calldata->first_name, calldata->mi, (calldata->mi != '\0' ? " " : ""), calldata->last_name);
+      fprintf(stdout, "Name: %s %c%s%s\n", calldata->first_name, calldata->mi, (calldata->mi != '\0' ? " " : ""), calldata->last_name);
    }
 
    if (calldata->alias_count > 0 && (calldata->aliases[0] != '\0')) {
@@ -199,8 +202,22 @@ bool calldata_dump(calldata_t *calldata) {
    return true;
 }
 
+static void stdio_cb(EV_P_ ev_io *w, int revents) {
+   // 
+}
+
+static void periodic_cb(EV_P_ ev_timer *w, int revents) {
+   // update our shared timestamp
+   now = time(NULL);
+}
+
 int main(int argc, char **argv) {
+   struct ev_loop *loop = EV_DEFAULT;
+   struct ev_io io_watcher;
+   struct ev_timer periodic_watcher;
    bool res = false;
+
+   now = time(NULL);
 
    // This can't work without a valid configuration...
    if (!(cfg = load_config()))
@@ -216,6 +233,13 @@ int main(int argc, char **argv) {
    }
    log_send(mainlog, LOG_NOTICE, "%s/%s starting up!", progname, VERSION);
 
+   ev_io_init(&io_watcher, stdio_cb, STDIN_FILENO, EV_READ);
+   ev_io_start(loop, &io_watcher);
+
+   // start our once a second periodic timer (used for housekeeping and the clock display)
+   ev_timer_init(&periodic_watcher, periodic_cb, 0, 1);
+   ev_timer_start(loop, &periodic_watcher);
+
    callsign_lookup_setup();
 
    if (callsign_use_qrz) {
@@ -224,8 +248,6 @@ int main(int argc, char **argv) {
       if (res == false) {
          log_send(mainlog, LOG_CRIT, "Failed logging into QRZ! :(");
          exit(EACCES);
-      } else {
-         log_send(mainlog, LOG_INFO, "Succesfully logged into QRZ!");
       }
    }
    printf("200 OK %s %s ready to answer requests. QRZ: %s, ULS: %s, GNIS: %s\n", progname, VERSION, (callsign_use_qrz ? "On" : "Off"), (callsign_use_uls ? "On" : "Off"), (use_gnis ? "On" : "Off"));
@@ -236,12 +258,12 @@ int main(int argc, char **argv) {
       calldata_t *calldata = callsign_lookup(argv[1]);
 
       if (calldata == NULL) {
-         fprintf(stdout, "404 callsign %s is unknown\n", callsign);
+         fprintf(stdout, "404 NOT FOUND %lu %s\n", now, callsign);
          log_send(mainlog, LOG_NOTICE, "Callsign %s was not found in enabled databases.", callsign);
          // give error status
          exit(1);
       } else {
-         calldata_dump(calldata);
+         calldata_dump(calldata, callsign);
       }
 
       free(calldata);
@@ -250,8 +272,12 @@ int main(int argc, char **argv) {
       // we're done with lookup, exit instead of running the loop ;)
       exit(0);
    }
+
    while(1) {
-      sleep(1);
+      ev_run(loop, 0);
+
+      // if ev loop exits, we need to die..
+      dying = true;
    }
 
    return 0;

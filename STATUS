@@ -3,7 +3,10 @@ binaries
     callsign-lookupd:
             * QRZ
                     * Login: WORKING
-                    * Callsign Lookup: WIP
+                    * Callsign Lookup: WORKING
+		    * Commandline lookups (./lookup CALLSIGN): WORKING
+	    * Cache: WIP
+
     decoderd-ft8:
             * some example code, not yet started really
 
@@ -15,6 +18,8 @@ binaries
 
     ft8goblin:
             * TUI
+		    * InputBox completed
                     * TextArea: widget needs finished
+
     sigcapd:
             * placeholder, NYI

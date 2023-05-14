@@ -38,7 +38,7 @@
     },
     "callsign-lookup": {
       "use-uls": "true",
-      "fcc-uls-database": "fcc_uls.db",
+      "fcc-uls-database": "fcc-uls.db",
       "use-qrz": "false",
       "qrz-api-url": "https://xmldata.qrz.com/xml/1.34/",
       "qrz-api-key": "xxxx",

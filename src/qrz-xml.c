@@ -20,7 +20,6 @@
 #include <string.h>
 
 extern char *progname;
-time_t now;
 static const char *qrz_user = NULL, *qrz_pass = NULL, *qrz_api_key = NULL, *qrz_api_url;
 static qrz_session_t *qrz_session = NULL;
 static bool already_logged_in = false;
@@ -428,7 +427,7 @@ bool http_post(const char *url, const char *postdata, char *buf, size_t bufsz) {
       curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postdata);
    }
 
-   log_send(mainlog, LOG_DEBUG, "qrz:http_post: Fetching %s", url);
+//   log_send(mainlog, LOG_DEBUG, "qrz:http_post: Fetching %s", url);
 
    // send the request
    res = curl_easy_perform(curl);
@@ -521,6 +520,10 @@ calldata_t *qrz_lookup_callsign(const char *callsign) {
 
    if (http_post(buf, NULL, outbuf, sizeof(outbuf)) != false) {
       qrz_parse_http_data(outbuf, calldata);
+   }
+
+   if (calldata->callsign[0] != '\0') {
+      log_send(mainlog, LOG_INFO, "result for callsign %s returned. cached: %s", calldata->callsign, (calldata->cached ? "true" : "false"));
    }
 
    return calldata;
