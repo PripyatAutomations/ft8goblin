@@ -195,7 +195,7 @@ bool qrz_parse_http_data(const char *buf, calldata_t *calldata) {
          char new_calldata[callsign_len + 1];
          memset(new_calldata, 0, callsign_len + 1);
          snprintf(new_calldata, callsign_len, "%s", callsign);
-         log_send(mainlog, LOG_INFO, "Got Callsign data <%lu bytes>: %s", callsign_len, new_calldata);
+//         log_send(mainlog, LOG_INFO, "Got Callsign data <%lu bytes>: %s", callsign_len, new_calldata);
 
          /* Here we need to break out the fields and apply them to their respective parts of the calldata_t */
          char *call = strstr(buf, "<call>") + 6;

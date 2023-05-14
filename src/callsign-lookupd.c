@@ -70,7 +70,6 @@ calldata_t *callsign_lookup(const char *callsign) {
        callsign_lookup_setup();
     }
 
-/*
     // Look in cache
     if ((qr = callsign_cache_find(callsign)) != NULL) {
        from_cache = true;
@@ -81,7 +80,6 @@ calldata_t *callsign_lookup(const char *callsign) {
     if (qr == NULL) {
        qr = uls_lookup_callsign(callsign);
     }
-*/
 
     // nope, check QRZ XML API
     if (qr == NULL) {
@@ -126,12 +124,9 @@ bool calldata_dump(calldata_t *calldata) {
    // The answer originally came from QRZ at Mon May  8 06:18:00 AM EDT 2023
    // and will expire (if we go online) at Thu May 11 06:18:00 AM EDT 2023.
    fprintf(stdout, "200 OK %s ONLINE %lu QRZ\n", calldata->callsign, time(NULL));
-
-   // XXX: Look for properties that aren't NULL and print them nicely for the user
-   // XXX: while still being machine friendly!
    fprintf(stdout, "Callsign: %s\n", calldata->callsign);
-   fprintf(stdout, "Cached: %s\n", (calldata->cached ? "true" : "false"));
 
+   fprintf(stdout, "Cached: %s\n", (calldata->cached ? "true" : "false"));
    if (calldata->cached) {
       fprintf(stdout, "Cache-Fetched: %lu\n", calldata->cache_fetched);
       fprintf(stdout, "Cache-Expiry: %lu\n", calldata->cache_expiry);
@@ -243,6 +238,8 @@ int main(int argc, char **argv) {
       if (calldata == NULL) {
          fprintf(stdout, "404 callsign %s is unknown\n", callsign);
          log_send(mainlog, LOG_NOTICE, "Callsign %s was not found in enabled databases.", callsign);
+         // give error status
+         exit(1);
       } else {
          calldata_dump(calldata);
       }
