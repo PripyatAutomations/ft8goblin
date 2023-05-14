@@ -111,10 +111,11 @@ bool calldata_dump(calldata_t *calldata, const char *callsign) {
       if (calldata->query_callsign[0] == '\0') {
          fprintf(stdout, "404 NOT FOUND %lu %s\n", now, calldata->query_callsign);
          log_send(mainlog, LOG_DEBUG, "Lookup for %s failed, not found!\n", calldata->query_callsign);
-      } else if (callsign == NULL) {
-         log_send(mainlog, LOG_DEBUG, "Lookup failed: query_callsign unset!");
-      } else {
+      } else if (callsign != NULL) {
          fprintf(stdout, "404 NOT FOUND %lu %s\n", now, callsign);
+      } else {
+         log_send(mainlog, LOG_DEBUG, "Lookup failed: query_callsign unset!");
+         fprintf(stdout, "404 NOT FOUND %lu\n", now);
       }
       return false;
    }
@@ -174,7 +175,6 @@ bool calldata_dump(calldata_t *calldata, const char *callsign) {
    if (calldata->state[0] != '\0') {
       fprintf(stdout, "State: %s\n", calldata->state);
    }
-
 
    if (calldata->zip[0] != '\0') {
       fprintf(stdout, "Zip: %s\n", calldata->zip);
@@ -250,30 +250,33 @@ int main(int argc, char **argv) {
          exit(EACCES);
       }
    }
-   printf("200 OK %s %s ready to answer requests. QRZ: %s, ULS: %s, GNIS: %s\n", progname, VERSION, (callsign_use_qrz ? "On" : "Off"), (callsign_use_uls ? "On" : "Off"), (use_gnis ? "On" : "Off"));
+   printf("+OK %s/%s ready to answer requests. QRZ: %s, ULS: %s, GNIS: %s\n", progname, VERSION, (callsign_use_qrz ? "On" : "Off"), (callsign_use_uls ? "On" : "Off"), (use_gnis ? "On" : "Off"));
 
-   // if called with a callsign, look it up, return the parsed output and exit
+   // if called with callsign(s) as args, look them up, return the parsed output and exit
    if (argc > 1) {
-      char *callsign = argv[1];
-      calldata_t *calldata = callsign_lookup(argv[1]);
+      for (int i = 1; i <= (argc - 1); i++) {
+         char *callsign = argv[i];
 
-      if (calldata == NULL) {
-         fprintf(stdout, "404 NOT FOUND %lu %s\n", now, callsign);
-         log_send(mainlog, LOG_NOTICE, "Callsign %s was not found in enabled databases.", callsign);
-         // give error status
-         exit(1);
-      } else {
-         calldata_dump(calldata, callsign);
+         calldata_t *calldata = callsign_lookup(callsign);
+
+         if (calldata == NULL) {
+            fprintf(stdout, "404 NOT FOUND %lu %s\n", now, callsign);
+            log_send(mainlog, LOG_NOTICE, "Callsign %s was not found in enabled databases.", callsign);
+            // give error status for scripts
+            exit(1);
+         } else {
+            // Send the result
+            calldata_dump(calldata, callsign);
+         }
+         free(calldata);
+         calldata = NULL;
       }
 
-      free(calldata);
-      calldata = NULL;
-
-      // we're done with lookup, exit instead of running the loop ;)
-      exit(0);
+      dying = true;
    }
 
-   while(1) {
+   while(!dying) {
+      fprintf(stderr, "CHICKEN!\n");
       ev_run(loop, 0);
 
       // if ev loop exits, we need to die..

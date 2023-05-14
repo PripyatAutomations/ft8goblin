@@ -23,6 +23,7 @@ extern char *progname;
 static const char *qrz_user = NULL, *qrz_pass = NULL, *qrz_api_key = NULL, *qrz_api_url;
 static qrz_session_t *qrz_session = NULL;
 static bool already_logged_in = false;
+extern time_t now;
 bool qrz_active = true;
 
 // XXX: Add some code to support retrying login a few times, if error other than invalid credentials occurs
@@ -85,8 +86,8 @@ bool qrz_parse_http_data(const char *buf, calldata_t *calldata) {
          snprintf(newkey, key_len + 1, "%s", key);
             
 //         log_send(mainlog, LOG_DEBUG, "qrz_xml_api: Got session key: %s, key_len: %lu", newkey, key_len);
-         // XXX: In theory, this will be slightly less CPU cycles in the frequent case the key is unchanged.
          // We need to deal with the case of QRZ returning a new key when one expires during a lookup, however...
+         // In theory, this will be slightly less CPU cycles in the frequent case the key is unchanged.
          if (strncmp(q->key, newkey, MAX(key_len, strlen(q->key))) != 0) {
             memset(q->key, 0, 33);
             snprintf(q->key, 33, "%s", newkey);
@@ -163,21 +164,21 @@ bool qrz_parse_http_data(const char *buf, calldata_t *calldata) {
       }
 
       // warn the user about upcoming QRZ subscription expiration starting at 90 days...
-      time_t mynow = time(NULL);
-      if (q->sub_expiration <= mynow + 7776000) {		// <= 90 days
-         log_send(mainlog, LOG_NOTICE, "QRZ subscription expires within 90 days (%d days).", (mynow - q->sub_expiration) / 86400);
-      } else if (q->sub_expiration <= mynow + 5184000) {	// <= 60 days
-         log_send(mainlog, LOG_NOTICE, "QRZ subscription expires within 60 days (%d days), you should consider renewing soon...", (mynow - q->sub_expiration) / 86400);
-      } else if (q->sub_expiration <= mynow + 2592000) {	// <= 30 days
-         // XXX: this should pop up a dialog once per session to alert the user
-         log_send(mainlog, LOG_CRIT, "QRZ subscription expires within 30 days (%d days), you really should renew soon...", (mynow - q->sub_expiration) / 86400);
-      } else if (q->sub_expiration <= mynow + 604800) {	// <= 7 days
-         // XXX: this should pop up a dialog once per session to alert the user
-         log_send(mainlog, LOG_CRIT, "QRZ subscription expires within 7 days (%d days), you really should renew soon...", (mynow - q->sub_expiration) / 86400);
-      }
       if (!already_logged_in) {
-         log_send(mainlog, LOG_INFO, "Logged into QRZ. Your subscription expires %s. You've used %d queries.", datebuf, q->count);
-         already_logged_in = true;
+         if (q->sub_expiration <= now + 7776000) {		// <= 90 days
+            log_send(mainlog, LOG_NOTICE, "QRZ subscription expires within 90 days (%d days).", (now - q->sub_expiration) / 86400);
+         } else if (q->sub_expiration <= now + 5184000) {	// <= 60 days
+            log_send(mainlog, LOG_NOTICE, "QRZ subscription expires within 60 days (%d days), you should consider renewing soon...", (now - q->sub_expiration) / 86400);
+         } else if (q->sub_expiration <= now + 2592000) {	// <= 30 days
+            // XXX: this should pop up a dialog once per session to alert the user
+            log_send(mainlog, LOG_CRIT, "QRZ subscription expires within 30 days (%d days), you really should renew soon...", (now - q->sub_expiration) / 86400);
+         } else if (q->sub_expiration <= now + 604800) {	// <= 7 days
+            // XXX: this should pop up a dialog once per session to alert the user
+            log_send(mainlog, LOG_CRIT, "QRZ subscription expires within 7 days (%d days), you really should renew soon...", (now - q->sub_expiration) / 86400);
+         } else {	// not expiring in the next 90 days
+            log_send(mainlog, LOG_INFO, "Logged into QRZ. Your subscription expires %s. You've used %d queries.", datebuf, q->count);
+            already_logged_in = true;
+         }
       }
    }
 
