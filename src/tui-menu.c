@@ -86,7 +86,7 @@ menu_window_t *menu_window_render(menu_t *menu, int menu_entries) {
     menu_window_t *wp = NULL;
 
     if ((wp = malloc(sizeof(menu_window_t))) == NULL) {
-       fprintf(stderr, "menu_window_render: out of memory!");
+       fprintf(stderr, "menu_window_render: out of memory!\n");
        exit(250);
     }
 
