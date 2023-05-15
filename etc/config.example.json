@@ -102,7 +102,12 @@
           "rx-audio-device": "hwplug:0"
        }
    ],
-
+   "timeouts": {
+       "cq-no-response-cycles": 15,
+       "cq-no-response-time": "5m",
+       "cq-no-response-switch-timeslot": true,
+       "directed-no-response-cycles": 3
+   },
    "bands": [
       {
          "device": "usrp0",
