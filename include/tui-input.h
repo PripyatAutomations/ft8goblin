@@ -32,7 +32,6 @@ extern "C" {
    extern void tui_show_input(void);
    extern void tui_input_init(void);
    extern void tui_input_shutdown(void);
-   extern struct ev_loop *loop;
    extern time_t now;
 //   extern const size_t input_buf_sz;
 //   extern size_t input_buf_offset;

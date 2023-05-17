@@ -20,6 +20,7 @@
 #include <sys/wait.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <ev.h>
 #include <termbox2.h>
 #include "ft8goblin_types.h"
 #include "subproc.h"
@@ -29,9 +30,18 @@
 extern TextArea *msgbox;
 extern int y;			// from ui.c
 static int max_subprocess = 0;
+struct ev_loop *loop = NULL;
 
 // this shouldn't be exported as we'll soon provide utility functions for it
 static subproc_t *children[MAX_SUBPROC];
+
+static void subproc_cb(EV_P_ ev_child *w, int revents) {
+   // remove the watcher
+   ev_child_stop(EV_A_ w);
+
+   // log the event
+   log_send(mainlog, LOG_CRIT, "subproc: process %d exited with status %x\n", w->rpid, w->rstatus);
+}
 
 bool subproc_start(int slot) {
    if (slot < 0 || slot > max_subprocess) {
@@ -41,19 +51,30 @@ bool subproc_start(int slot) {
 
    subproc_t *p = children[slot];
 
+   if (loop == NULL) {
+      loop = EV_DEFAULT;
+   }
+
    // well look here! we have a commandline to execute!
    if ((p->argc > 0) && (p->argv[0] != NULL)) {
-      int pid = 0;
+      int saved_errno = 0;
+      int pid = -1;
       // XXX: fork and create the subprocess
+      pid = fork();
+      saved_errno = errno;
 
       // if it was successful, store it in the process
-      if (pid > 1) {
+      if (pid < 0) {
+         log_send(mainlog, LOG_CRIT, "error forking subprocess %d: %s - %d: %s", slot, children[slot]->name, saved_errno, strerror(saved_errno));
+         return false;
+      } else if (pid == 0) {
+         exit(1);
+      } else {
          p->pid = pid;
          p->needs_restarted = 0;
          p->restart_time = 0;
-      } else {
-         // otherwise cry about it to the log
-         log_send(mainlog, LOG_CRIT, "subproc_start(%d) failed! got pid=%d which isnt valid.", slot, pid);
+         ev_child_init(&p->watcher, subproc_cb, pid, 0);
+         ev_child_start(loop, &p->watcher);
       }
    }
    return true;

@@ -2,6 +2,7 @@
 #define	_subproc_h
 #include <limits.h>
 #include <stdlib.h>
+#include <ev.h>
 
 #define	MAX_SUBPROC	128			// i doubt we'll ever reach this limit, but it'd be cool if we could (that's a lot of bands!)
 
@@ -14,6 +15,7 @@ extern "C" {
       char		name[64];		// subprocess name (for subproc_list() etc)
       char		*argv[128];		// pointer to the arguments needed to execute the process
       int		argc;			// arguments counter
+      ev_child 		watcher;		// ev_child watcher for process
       time_t		restart_time;		// when should we restart?
       time_t		watchdog_start;		// watchdog is started if the process crashes, it expires after cfg:supervisor/max-crash-time.
                                                 // when active, watchdog_events tracks the number of crashes
