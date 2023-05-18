@@ -3,6 +3,7 @@ all: world
 bins := ft8goblin decoderd-ft8 encoderd-ft8 sigcapd callsign-lookupd flac-streamerd
 
 include mk/config.mk
+include mk/ft8lib.mk
 
 common_objs += config.o
 common_objs += daemon.o
@@ -32,17 +33,7 @@ sigcapd_objs += sigcapd.o
 sigcapd_objs += uhd.o
 sigcapd_objs += hamlib.o
 sigcapd_objs += alsa.o		# ALSA Linux Audio
-
-flac_streamerd_objs += config.o
-flac_streamerd_objs += daemon.o
-flac_streamerd_objs += debuglog.o
-flac_streamerd_objs += dict.o
 flac_streamerd_objs += flac-streamerd.o
-flac_streamerd_objs += ipc.o
-flac_streamerd_objs += memory.o
-flac_streamerd_objs += ringbuffer.o
-flac_streamerd_objs += util.o
-
 callsign_lookupd_objs += callsign-lookupd.o
 callsign_lookupd_objs += fcc-db.o
 callsign_lookupd_objs += gnis-lookup.o	# place names database
@@ -78,29 +69,29 @@ extra_clean += ${real_bins} ${ft8lib} ${ft8lib_objs}
 qrztest: qrztest2.c
 	gcc -o $@ $< -lxml2 -lcurl -I/usr/include/libxml2
 
-bin/ft8goblin: ${ft8goblin_real_objs}
-	@echo "[Linking] $^ to $@"
-	@${CC} -o $@ $^ ${ft8goblin_ldflags} ${LDFLAGS}
+bin/ft8goblin: ${ft8goblin_real_objs} ${termbox2}
+	@echo "[Linking] $@"
+	@${CC} -o $@ ${ft8goblin_real_objs} ${ft8goblin_ldflags} ${LDFLAGS}
 
-bin/decoderd-ft8: ${ft8decoder_real_objs}
-	@echo "[Linking] $^ to $@"
-	@${CC} -o $@ $^ ${ft8coder_ldflags} ${LDFLAGS}
+bin/decoderd-ft8: ${ft8decoder_real_objs} ${ft8lib}
+	@echo "[Linking] $@"
+	@${CC} -o $@ ${ft8decoder_real_objs} ${ft8coder_ldflags} ${LDFLAGS}
 
-bin/encoderd-ft8: ${ft8encoder_real_objs}
-	@echo "[Linking] $^ to $@"
-	@${CC} -o $@ $^ ${ft8coder_ldflags} ${LDFLAGS}
+bin/encoderd-ft8: ${ft8encoder_real_objs} ${ft8lib}
+	@echo "[Linking] $@"
+	@${CC} -o $@ ${ft8encoder_real_objs} ${ft8coder_ldflags} ${LDFLAGS}
 
 bin/callsign-lookupd: ${callsign_lookupd_real_objs}
-	@echo "[Linking] $^ to $@"
-	@${CC} -o $@ $^ ${callsign_lookupd_ldflags} ${LDFLAGS}
+	@echo "[Linking] $@"
+	@${CC} -o $@ ${callsign_lookupd_real_objs} ${callsign_lookupd_ldflags} ${LDFLAGS}
 
 bin/sigcapd: ${sigcapd_real_objs}
-	@echo "[Linking] $^ to $@"
-	@${CXX} -o $@ $^ ${sigcapd_ldflags} ${LDFLAGS}
+	@echo "[Linking] $@"
+	@${CXX} -o $@ ${sigcapd_real_objs} ${sigcapd_ldflags} ${LDFLAGS}
 
 bin/flac-streamerd: ${flac_streamerd_real_objs}
-	@echo "[Linking] $^ to $@"
-	@${CXX} -o $@ $^ ${flac_streamerd_ldflags} ${LDFLAGS}
+	@echo "[Linking] ${flac_streamerd_real_objs} to $@"
+	@${CXX} -o $@ ${flac_streamerd_real_objs} ${flac_streamerd_ldflags} ${LDFLAGS}
 
 obj/sigcapd.o: src/sigcapd.cc
 	@echo "[CXX] $^ -> $@"
@@ -119,7 +110,6 @@ obj/tui-menu.o: src/tui-menu.c
 	@${CC} ${CFLAGS} -o $@ -c $< -Wno-error=int-conversion -Wno-missing-braces
 
 include mk/compile.mk
-include mk/ft8lib.mk
 include mk/termbox2.mk
 include mk/yajl.mk
 include mk/help.mk
