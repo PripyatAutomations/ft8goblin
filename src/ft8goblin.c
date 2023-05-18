@@ -604,6 +604,7 @@ int main(int argc, char **argv) {
    }
    log_send(mainlog, LOG_NOTICE, "ft8goblin/%s starting up!", VERSION);
 
+
    // setup the TUI toolkit
    tui_init();
    tui_input_init();
@@ -623,6 +624,8 @@ int main(int argc, char **argv) {
    // Set up IPC
 
    // Start supervising subprocesses:
+   // setup subprocess keeper
+   subproc_init();
    //	sigcapd (one instance)
    //	ft8capture (single instance per device)
         // XXX: Walk the tree at cfg:devices
@@ -630,7 +633,11 @@ int main(int argc, char **argv) {
         // XXX: Figure out which bands can be connected to which devices and start slicers in sigcapd
    //	ft8decoder (one per band)
    // 	callsign-lookupd (one instance)
-//   subproc_start();
+   const char *args[2] = { "./bin/callsign-lookupd", NULL };
+   int callsign_lookupd_slot = subproc_create("callsign-lookupd:main", "./bin/callsign-lookupd", args, 2);
+   if (callsign_lookupd_slot < 0) {
+      log_send(mainlog, LOG_CRIT, "Well crap.. failed to start callsign-lookupd");
+   }
 
    // main loop...
    while (!dying) {
@@ -641,6 +648,7 @@ int main(int argc, char **argv) {
       dying = true;
    }
 
+   subproc_shutdown_all();
    tui_shutdown();
    log_close(mainlog);
    mainlog = NULL;

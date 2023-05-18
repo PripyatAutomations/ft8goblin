@@ -12,7 +12,8 @@ extern "C" {
    typedef struct subproc subproc_t;
    struct subproc {
       int 		pid;			// host process id
-      char		name[64];		// subprocess name (for subproc_list() etc)
+      char		name[91];		// subprocess name (for subproc_list() etc)
+      char		path[PATH_MAX];		// path to executable
       char		*argv[128];		// pointer to the arguments needed to execute the process
       int		argc;			// arguments counter
       ev_child 		watcher;		// ev_child watcher for process
@@ -22,10 +23,13 @@ extern "C" {
       int		watchdog_events;	// during watchdog, this is incremented with the number of crashes
       int		needs_restarted;	// does it need restarted by the periodic thread?
    };
+   extern bool subproc_init(void);
    extern int subproc_killall(int signum);
    extern void subproc_shutdown_all(void);
    extern int subproc_check_all(void);
    extern int subproc_respawn_corpses(void);
+   extern bool subproc_start(int slot);
+   extern int subproc_create(const char *name, const char *path, const char **argv, int argc);
 
 #ifdef __cplusplus
 };

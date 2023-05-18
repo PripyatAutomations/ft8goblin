@@ -16,7 +16,6 @@
 #include "maidenhead.h"
 #include "ringbuffer.h"
 #include "sound_io.h"
-#include "sql.h"
 #include "udp_src.h"
 #include "uhd.h"
 #include "util.h"

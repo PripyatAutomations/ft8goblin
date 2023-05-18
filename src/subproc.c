@@ -40,18 +40,15 @@ static void subproc_cb(EV_P_ ev_child *w, int revents) {
    ev_child_stop(EV_A_ w);
 
    // log the event
-   log_send(mainlog, LOG_CRIT, "subproc: process %d exited with status %x\n", w->rpid, w->rstatus);
+   log_send(mainlog, LOG_CRIT, "subproc: process %d exited with status %d\n", w->rpid, w->rstatus);
 
    // Find subproc in children[] that matches
    int i;
    subproc_t *p = NULL;
 
    for (i = 0; i < MAX_SUBPROC; i++) {
-      // End of list, don't waste time continuing...
-      // XXX: Is this right or might we zero slots and leave gaps in the array?
-      // XXX: We should consider this and modify appropriately... 20230517
       if (children[i] == NULL) {
-         break;
+         continue;
       }
 
       // is this our match?
@@ -62,18 +59,27 @@ static void subproc_cb(EV_P_ ev_child *w, int revents) {
    }
 
    // This setting will cause the periodic timer to restart the process soon...
-   p->restart_time = 0;
-   p->needs_restarted = true;
+   if (p != NULL) {
+      p->restart_time = 0;
+      p->needs_restarted = true;
+   }
 }
 
 bool subproc_start(int slot) {
+   subproc_t *p = NULL;
+
    if (slot < 0 || slot > max_subprocess) {
       log_send(mainlog, LOG_CRIT, "subproc_start called with slot %d that isn't between 0 and max_subprocess (%d), cancelling!", slot, max_subprocess);
       return false;
    }
 
-   subproc_t *p = children[slot];
 
+   if ((p = children[slot]) == NULL) {
+      log_send(mainlog, LOG_CRIT, "subproc_start %d failed: no such subprocess in table main");
+      return false;
+   }
+
+   // setup evloop pointer if not done yet
    if (loop == NULL) {
       loop = EV_DEFAULT;
    }
@@ -91,11 +97,18 @@ bool subproc_start(int slot) {
          log_send(mainlog, LOG_CRIT, "error forking subprocess %d: %s - %d: %s", slot, children[slot]->name, saved_errno, strerror(saved_errno));
          return false;
       } else if (pid == 0) {
+         if (execv(p->path, p->argv) == -1) {
+            saved_errno = errno;
+            log_send(mainlog, LOG_CRIT, "subproc_start(%d): error in execv(%s,%p): %d: %s", slot, p->path, p->argv, saved_errno, strerror(saved_errno));
+         }
          exit(1);
       } else {
+         // succesful start, disable pending restarts
          p->pid = pid;
          p->needs_restarted = 0;
          p->restart_time = 0;
+
+         // enable child process watcher in libev, so we can track when it dies...
          ev_child_init(&p->watcher, subproc_cb, pid, 0);
          ev_child_start(loop, &p->watcher);
       }
@@ -104,23 +117,16 @@ bool subproc_start(int slot) {
 }
 
 // Create a new subprocess, based on the details provided and start it
-int subproc_create(const char *name, const char **argv, int argc) {
+int subproc_create(const char *name, const char *path, const char **argv, int argc) {
    subproc_t *sp = NULL;
 
-   if (name == NULL || argv == NULL || argc <= 0) {
+   if (path == NULL || argv == NULL || argc <= 0) {
       log_send(mainlog, LOG_CRIT, "subproc_create: got invalid (NULL) (argc: %d) arguments.", argc);
       return -1;
    }
 
    // figure out our subprocess slot...
    int myslot = -1;
-
-   for (int x = 0; x < max_subprocess; x++) {
-      if (children[x] == NULL) {
-         children[x] = sp;
-         myslot = x;
-      }
-   }
 
    if ((sp = malloc(sizeof(subproc_t))) == NULL) {
       fprintf(stderr, "subproc_create: out of memory!\n");
@@ -129,22 +135,45 @@ int subproc_create(const char *name, const char **argv, int argc) {
    // and zero it!
    memset(sp, 0, sizeof(subproc_t));
 
-   // store the name of the process
-   size_t name_sz = sizeof(name);
-   size_t copylen = ((strlen(name) > (name_sz - 1)) ? (name_sz - 1) : strlen(name));
-   memcpy(sp->name, name, copylen);
+   // store the name of the process (for PSLIST command, etc)
+   size_t name_len = strlen(name);
+   memcpy(sp->name, name, name_len);
+
+   // store the path of the process
+   size_t path_len = strlen(path);
+   memcpy(sp->path, path, path_len);
 
    // and duplicate the arguments
    sp->argc = argc;
-   for (int i = 0; i < argc; i++) {
+   for (int i = 0; i < sp->argc; i++) {
       if (argv[i] != NULL) {
          sp->argv[i] = strdup(argv[i]);
       }
    }
 
+   // insert it into a free slot...
+   for (myslot = 0; myslot <= MAX_SUBPROC; myslot++) {
+      if (children[myslot] == NULL) {
+         if (myslot > max_subprocess) {
+            max_subprocess = myslot;
+         }
+
+         children[myslot] = sp;
+         log_send(mainlog, LOG_DEBUG, "subproc_create: using slot %d", myslot);
+         break;
+      } else {
+         log_send(mainlog, LOG_DEBUG, "subproc_create: skipping slot %d, it points to %p", myslot, children[myslot]);
+      }
+   }
+
    // and start the process slot we created above!
-   subproc_start(myslot);
-   return -1;
+   if (children[myslot] != NULL) {
+      subproc_start(myslot);
+   } else {
+      log_send(mainlog, LOG_CRIT, "couldnt start subprocess, slot init failed. aborting!");
+      abort();
+   }
+   return myslot;
 }
 
 static void subproc_delete(int i) {
@@ -155,16 +184,17 @@ static void subproc_delete(int i) {
 
    // if there's a commandline stored, free it
    for (int x = 0; x < children[i]->argc; x++) {
-      if (children[i]->argv[x] != NULL) {
-         free(children[i]->argv[x]);
+      subproc_t *sp = children[i];
+      if (sp->argv[x] != NULL) {
+         free(sp->argv[x]);
       }
+
+      free(sp);
+      sp = NULL;
+
+      if (max_subprocess > 0)
+         max_subprocess--;
    }
-
-   free(children[i]);
-   children[i] = NULL;
-
-   if (max_subprocess > 0)
-      max_subprocess--;
 }
 
 int subproc_killall(int signum) {
@@ -194,33 +224,34 @@ int subproc_killall(int signum) {
 
    int i = 0;
    for (i = 0; i < max_subprocess; i++) {
-      if (children[i] == NULL) {
+      subproc_t *sp = children[i];
+      if (sp == NULL) {
          continue;
       }
 
-      ta_printf(msgbox, "$YELLOW$sending %s (%d) to child process %s <%d>...", signame, signum, children[i]->name, children[i]->pid);
-      log_send(mainlog, LOG_NOTICE, "sending %s (%d) to child process %s <%d>...", signame, signum, children[i]->name, children[i]->pid);
+      ta_printf(msgbox, "$YELLOW$sending %s (%d) to child process %s <%d>...", signame, signum, sp->name, sp->pid);
+      log_send(mainlog, LOG_NOTICE, "sending %s (%d) to child process %s <%d>...", signame, signum, sp->name, sp->pid);
       tb_present();
 
       // disable watchdog / pending restarts
-      children[i]->restart_time = 0;
-      children[i]->needs_restarted = 0;
-      children[i]->watchdog_start = 0;
-      children[i]->watchdog_events = 0;
+      sp->restart_time = 0;
+      sp->needs_restarted = 0;
+      sp->watchdog_start = 0;
+      sp->watchdog_events = 0;
 
       // catch obvious errors (init is pid 1)
-      if (children[i]->pid <= 1) {
+      if (sp->pid <= 1) {
          continue;
       }
 
       // if successfully sent signal, increment rv, so we'll sleep if called from subproc_shutdown()
-      if (kill(children[i]->pid, signum) == 0)
+      if (kill(sp->pid, signum) == 0)
          rv++;
 
       // Try waitpid(..., WNOHANG) to see if the pid is still alive
       time_t wstart = time(NULL);
       int wstatus;
-      int pid = waitpid(children[i]->pid, &wstatus, WNOHANG);
+      int pid = waitpid(sp->pid, &wstatus, WNOHANG);
 
       // An error occured
       if (pid == -1) {
@@ -230,16 +261,11 @@ int subproc_killall(int signum) {
         ta_printf(msgbox, "$YELLOW$-- no response, sleeping 3 seconds before next attempt...");
         sleep(3);
         continue;
-      } else if (pid == children[i]->pid) {
+      } else if (pid == sp->pid) {
         // the process has terminated
         // we can delete the subproc and avoid sending further signals to a dead PID...
         subproc_delete(i);
       }
-   }
-
-   // delete the data structure
-   if (children[i] != NULL) {
-      subproc_delete(i);
    }
 
    // return > 0, if we sent any kill signals
@@ -273,10 +299,12 @@ int subproc_check_all(void) {
 
    // scan the child process table and see if any have died
    for (int i = 0; i < max_subprocess; i++) {
+      subproc_t *sp = children[i];
+
       // check if the process is still alive
       time_t wstart = time(NULL);
       int wstatus;
-      int pid = waitpid(children[i]->pid, &wstatus, WNOHANG);
+      int pid = waitpid(sp->pid, &wstatus, WNOHANG);
 
       if (pid == -1) {
         // an error occured
@@ -286,50 +314,55 @@ int subproc_check_all(void) {
         // process is still alive, count it
         rv++;
         continue;
-      } else if (children[i]->pid == pid) {
+      } else if (sp->pid == pid) {
         // process has exited
         // mark the PID as invalid and needs_restarted
-        children[i]->pid = -1;
-        children[i]->needs_restarted = 1;
+        sp->pid = -1;
+        sp->needs_restarted = 1;
         int watchdog_expire = cfg_get_int(cfg, "supervisor/max-crash-time");
         int watchdog_max_events = cfg_get_int(cfg, "supervisor/max-crashes");
 
         // are we already performing watchdog on this subproc due to previous crashes??
-        if (children[i]->watchdog_start == 0) {
+        if (sp->watchdog_start == 0) {
            // nope, start the watchdog
-           children[i]->watchdog_start = now;
-           children[i]->watchdog_events = 0;
-        } else if (children[i]->watchdog_start > 0) {
+           sp->watchdog_start = now;
+           sp->watchdog_events = 0;
+        } else if (sp->watchdog_start > 0) {
            // has the watchdog expired?
-           if (children[i]->watchdog_start + watchdog_expire <= now) {
+           if (sp->watchdog_start + watchdog_expire <= now) {
               // has there been a reasonable number of watchdog events?
-              if (children[i]->watchdog_events < watchdog_max_events) {
-                 log_send(mainlog, LOG_NOTICE, "subprocess %d (%s) has restored normal operation. It crashed %d times in %lu seconds.", i, children[i]->name, children[i]->watchdog_events, (now - children[i]->watchdog_start));
-                 children[i]->watchdog_start = 0;
-                 children[i]->watchdog_events = 0;
+              if (sp->watchdog_events < watchdog_max_events) {
+                 log_send(mainlog, LOG_NOTICE, "subprocess %d (%s) has restored normal operation. It crashed %d times in %lu seconds.", i, sp->name, sp->watchdog_events, (now - sp->watchdog_start));
+                 sp->watchdog_start = 0;
+                 sp->watchdog_events = 0;
               } else { // disable the service
-                 log_send(mainlog, LOG_CRIT, "subprocess %d (%s) has crashed %d times in %lu seconds. disabling restarts", i, children[i]->name, children[i]->watchdog_events, (now - children[i]->watchdog_start));
+                 log_send(mainlog, LOG_CRIT, "subprocess %d (%s) has crashed %d times in %lu seconds. disabling restarts", i, sp->name, sp->watchdog_events, (now - sp->watchdog_start));
               }
 
               // either way, we don't need a restart...
-              children[i]->needs_restarted = 0;
-              children[i]->restart_time = 0;
+              sp->needs_restarted = 0;
+              sp->restart_time = 0;
            }
         } else { // watchdog is still active
-           children[i]->needs_restarted = 1;
-           children[i]->watchdog_events++;
-           log_send(mainlog, LOG_DEBUG, "subprocess %d (%s) has crashed. This is the %d time in %lu seconds. It will be disabled after %d times.", i, children[i]->name, children[i]->watchdog_events, (now - children[i]->watchdog_start), watchdog_max_events);
+           sp->needs_restarted = 1;
+           sp->watchdog_events++;
+           log_send(mainlog, LOG_DEBUG, "subprocess %d (%s) has crashed. This is the %d time in %lu seconds. It will be disabled after %d times.", i, sp->name, sp->watchdog_events, (now - sp->watchdog_start), watchdog_max_events);
         }
 
       } else {
-        log_send(mainlog, LOG_DEBUG, "unexpected return valid %d from waitpid(%d) for subproc %d", pid, children[i]->pid, i);
+        log_send(mainlog, LOG_DEBUG, "unexpected return valid %d from waitpid(%d) for subproc %d", pid, sp->pid, i);
       }
 
       // schedule 3-15 seconds in the future, if not already set...
-      if (children[i]->needs_restarted && (children[i]->restart_time == 0)) {
-         children[i]->restart_time = get_random_interval(3, 15) + now;
-         log_send(mainlog, LOG_CRIT, "subprocess %d (%s) exited, registering it for restart in %lu seconds", i, children[i]->name, (children[i]->restart_time - now));
+      if (sp->needs_restarted && (sp->restart_time == 0)) {
+         sp->restart_time = get_random_interval(3, 15) + now;
+         log_send(mainlog, LOG_CRIT, "subprocess %d (%s) exited, registering it for restart in %lu seconds", i, sp->name, (sp->restart_time - now));
       }
    }
    return rv;
+}
+
+bool subproc_init(void) {
+   memset(children, 0, sizeof(children));
+   return true;
 }
