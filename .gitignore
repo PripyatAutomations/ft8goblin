@@ -1,4 +1,5 @@
 # Exclude build artifacts
+.git_timestamp
 obj/
 obj/*
 obj/*.map

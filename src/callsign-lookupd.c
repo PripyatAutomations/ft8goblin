@@ -319,7 +319,7 @@ static bool parse_request(const char *line) {
    return false;
 }
 
-static void stdio_cb(EV_P_ ev_io *w, int revents) {
+static void stdin_cb(EV_P_ ev_io *w, int revents) {
     if (EV_ERROR & revents) {
         fprintf(stderr, "Error event in stdin watcher\n");
         return;
@@ -392,7 +392,7 @@ int main(int argc, char **argv) {
    }
    memset(input, 0, sizeof(InputBuffer));
 
-   ev_io_init(&stdin_watcher, stdio_cb, STDIN_FILENO, EV_READ);
+   ev_io_init(&stdin_watcher, stdin_cb, STDIN_FILENO, EV_READ);
    stdin_watcher.data = input;
    ev_io_start(loop, &stdin_watcher);
 

@@ -65,6 +65,33 @@ static void subproc_cb(EV_P_ ev_child *w, int revents) {
    }
 }
 
+static void stdin_cb(EV_P_ ev_io *w, int revents) {
+    if (EV_ERROR & revents) {
+        fprintf(stderr, "Error event in stdin watcher\n");
+        return;
+    }
+    log_send(mainlog, LOG_DEBUG, "stdin: write waiting\n");
+    ev_io_stop(loop, w);
+}
+
+static void stdout_cb(EV_P_ ev_io *w, int revents) {
+    if (EV_ERROR & revents) {
+        log_send(mainlog, LOG_DEBUG, "Error event in stdout watcher\n");
+        return;
+    }
+    log_send(mainlog, LOG_CRIT, "stdout: read waiting\n");
+    ev_io_stop(loop, w);
+}
+
+static void stderr_cb(EV_P_ ev_io *w, int revents) {
+    if (EV_ERROR & revents) {
+        log_send(mainlog, LOG_CRIT, "Error event in stderr watcher\n");
+        return;
+    }
+    log_send(mainlog, LOG_CRIT, "stderr: read waiting\n");
+    ev_io_stop(loop, w);
+}
+
 bool subproc_start(int slot) {
    subproc_t *p = NULL;
 
@@ -88,7 +115,15 @@ bool subproc_start(int slot) {
    if ((p->argc > 0) && (p->argv[0] != NULL)) {
       int saved_errno = 0;
       int pid = -1;
-      // XXX: fork and create the subprocess
+
+      // XXX: we'll play with this a bit but if it doesn't work out, we'll teach callsign-lookupd about sockets.
+      // XXX: it shouldn't be too awful as we have libev to save us the dreadful bits...
+
+      // create the pipes for stdio
+      if (pipe(p->_stdin) == -1 || pipe(p->_stdout) == -1 || pipe(p->_stderr) == -1) {
+         log_send(mainlog, LOG_CRIT, "subproc_start(%d): pipe() failed: %d: %s", slot, errno, strerror(errno));
+         return false;
+      }
       pid = fork();
       saved_errno = errno;
 
@@ -97,12 +132,40 @@ bool subproc_start(int slot) {
          log_send(mainlog, LOG_CRIT, "error forking subprocess %d: %s - %d: %s", slot, children[slot]->name, saved_errno, strerror(saved_errno));
          return false;
       } else if (pid == 0) {
+         // XXX: Confirm/debug this magic when i'm not sleep deprived ;)
+         // do some magic...
+         close(p->_stdin[1]);		// close write end of stdin of child
+         dup2(p->_stdin[0], STDOUT_FILENO);
+
+         close(p->_stdout[0]);		// close read end of stdout of child
+         dup2(p->_stdout[1], STDIN_FILENO);
+
+         close(p->_stderr[0]);		// close read end of stderr of child
+         dup2(p->_stderr[1], STDERR_FILENO);
+
+         // spawn the process
          if (execv(p->path, p->argv) == -1) {
             saved_errno = errno;
             log_send(mainlog, LOG_CRIT, "subproc_start(%d): error in execv(%s,%p): %d: %s", slot, p->path, p->argv, saved_errno, strerror(saved_errno));
          }
          exit(1);
+      } else if (pid == -1) {
+         log_send(mainlog, LOG_CRIT, "subproc_start(%d): error in fork(): %d: %s", slot, errno, strerror(errno));
+         return false;
       } else {
+         // XXX: Confirm/debug this magic when i'm not sleep deprived ;)
+         close(p->_stdin[0]);		// close read end of stdin of parent
+         close(p->_stdout[1]);		// close write end of stdout of parent
+         close(p->_stderr[1]);		// close write end of stderr of parent
+
+         // setup ev_io watchers
+//         ev_io_init(&p->stdin_watcher, stdin_cb, p->_stdin[1], EV_WRITE);
+         ev_io_init(&p->stdout_watcher, stdout_cb, p->_stdout[0], EV_READ);
+         ev_io_init(&p->stderr_watcher, stderr_cb, p->_stderr[0], EV_READ);
+//         ev_io_start(loop, &p->stdin_watcher);
+         ev_io_start(loop, &p->stdout_watcher);
+         ev_io_start(loop, &p->stderr_watcher);
+
          // succesful start, disable pending restarts
          p->pid = pid;
          p->needs_restarted = 0;
@@ -159,10 +222,10 @@ int subproc_create(const char *name, const char *path, const char **argv, int ar
          }
 
          children[myslot] = sp;
-         log_send(mainlog, LOG_DEBUG, "subproc_create: using slot %d", myslot);
+         log_send(mainlog, LOG_DEBUG, "subproc_create: using slot %d for %s", myslot, name);
          break;
       } else {
-         log_send(mainlog, LOG_DEBUG, "subproc_create: skipping slot %d, it points to %p", myslot, children[myslot]);
+         log_send(mainlog, LOG_DEBUG, "subproc_create: skipping slot %d, it points to %p, while storing %s", myslot, children[myslot], name);
       }
    }
 
@@ -223,7 +286,7 @@ int subproc_killall(int signum) {
    }
 
    int i = 0;
-   for (i = 0; i < max_subprocess; i++) {
+   for (i = 0; i <= MAX_SUBPROC; i++) {
       subproc_t *sp = children[i];
       if (sp == NULL) {
          continue;
@@ -293,13 +356,17 @@ static time_t get_random_interval(int min, int max) {
    return rs_time;
 }
 
-// Check all subprocesses to make sure they're all still alive
+// Check all subprocesses to make sure they're all still alive or start them as needed...
 int subproc_check_all(void) {
    int rv = 0;
 
    // scan the child process table and see if any have died
-   for (int i = 0; i < max_subprocess; i++) {
+   for (int i = 0; i < MAX_SUBPROC; i++) {
       subproc_t *sp = children[i];
+
+      if (sp == NULL) {
+         continue;
+      }
 
       // check if the process is still alive
       time_t wstart = time(NULL);
@@ -350,7 +417,7 @@ int subproc_check_all(void) {
         }
 
       } else {
-        log_send(mainlog, LOG_DEBUG, "unexpected return valid %d from waitpid(%d) for subproc %d", pid, sp->pid, i);
+        log_send(mainlog, LOG_DEBUG, "unexpected return value %d from waitpid(%d) for subproc %d", pid, sp->pid, i);
       }
 
       // schedule 3-15 seconds in the future, if not already set...

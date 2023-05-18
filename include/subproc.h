@@ -22,6 +22,15 @@ extern "C" {
                                                 // when active, watchdog_events tracks the number of crashes
       int		watchdog_events;	// during watchdog, this is incremented with the number of crashes
       int		needs_restarted;	// does it need restarted by the periodic thread?
+      ///////////////////////
+      // stdio redirection //
+      ///////////////////////
+      int		_stdin[2];		// stdin of process
+      int		_stdout[2];		// stdout of process
+      int		_stderr[2];		// stderr of process
+      ev_io		stdin_watcher;
+      ev_io		stdout_watcher;
+      ev_io		stderr_watcher;
    };
    extern bool subproc_init(void);
    extern int subproc_killall(int signum);

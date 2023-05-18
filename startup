@@ -15,14 +15,37 @@ fi
 # Add ./lib to the library search path
 export LD_LIBRARY_PATH=./lib:${LD_LIBRARY_PATH}
 
+# Some logging stuff
+extern ASAN_OPTIONS="log_path=logs/asan.log"
+extern UBSAN_OPTIONS="log_path=logs/ubsan.log"
+
+# Reset the tty
 reset
+
+# Clear old log files
 rm -f logs/*.log
 
-# XXX: should we add a cmdline option to git pull?
+# Check if we haven't git pull'd in ${git_check_time}
+git_check_time=3600
 
+timestamp=$(date +%s)
+last_timestamp=0
+[ -f .git_timestamp ] && last_timestamp=$(cat .git_timestamp)
+[ ! -f .git_timestamp ] && echo ${timestamp} > .git_timestamp
+
+ts_diff=$((${timestamp}-${last_timestamp}))
+
+echo "ts_diff: $ts_diff"
+if [ $ts_diff -gt $git_check_time ]; then
+   # git pull 
+   git pull || echo "Couldn't git pull.. Are you online? Try again later!"
+
+   # save timestamp, so we won't try again for awhile...
+   echo "${timestamp}" > .git_timestamp
+fi
 # rebuild things or exit if failure
 echo "Hang on, we need to compile things... This should only take a moment."
-#make clean || exit 2
+make clean || exit 2
 make -j${NPROC} termbox2 world || exit 1
 
 # Start ft8goblin, if build was successful
