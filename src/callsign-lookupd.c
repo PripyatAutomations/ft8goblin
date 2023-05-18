@@ -123,7 +123,7 @@ static void callsign_lookup_setup(void) {
       } else {
          callsign_cache_db = s;
          callsign_cache_expiry = timestr2time_t(cfg_get_str(cfg, "callsign-lookup/cache-expiry"));
-         callsign_keep_stale_offline = str2bool(cfg_get_str(cfg, "callsign-lookup/cache-keep-stale-if-offline"), false);
+         callsign_keep_stale_offline = str2bool(cfg_get_str(cfg, "callsign-lookup/cache-keep-stale-if-offline"), true);
 
          if ((calldata_cache = sql_open(callsign_cache_db)) == NULL) {
             log_send(mainlog, LOG_CRIT, "callsign_lookup_setup: failed opening cache %s! Disabling caching!", callsign_cache_db);
@@ -175,7 +175,12 @@ bool callsign_cache_save(calldata_t *cp) {
 
    // initialize or reset prepared statement as needed
    if (cache_insert_stmt == NULL) {
-      const char *sql = "INSERT INTO cache (callsign, dxcc, aliases, first_name, last_name, addr1, addr2, state, zip, grid, country, latitude, longitude, county, class, codes, email, u_views, effective, expires, cache_expires, cache_fetched) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+      const char *sql = "INSERT INTO cache "
+         "(callsign, dxcc, aliases, first_name, last_name, addr1, addr2,"
+         "state, zip, grid, country, latitude, longitude, county, class,"
+         "codes, email, u_views, effective, expires, cache_expires,"
+         "cache_fetched) VALUES"
+         "( @CALL, @DXCC, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
       rc = sqlite3_prepare_v2(calldata_cache->hndl.sqlite3, sql , -1, &cache_insert_stmt, 0);
 
@@ -189,8 +194,8 @@ bool callsign_cache_save(calldata_t *cp) {
    }
 
    // bind variables
-   sqlite3_bind_text(cache_insert_stmt,    1, cp->callsign, -1, SQLITE_TRANSIENT);
-   sqlite3_bind_int(cache_insert_stmt,     2, cp->dxcc);
+   sqlite3_bind_text(cache_insert_stmt, sqlite3_bind_parameter_index(cache_insert_stmt, "@CALL"), cp->callsign, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_int(cache_insert_stmt, sqlite3_bind_parameter_index(cache_insert_stmt, "@DXCC"), cp->dxcc);
    sqlite3_bind_text(cache_insert_stmt,    3, cp->aliases, -1, SQLITE_TRANSIENT);
    sqlite3_bind_text(cache_insert_stmt,    4, cp->first_name, -1, SQLITE_TRANSIENT);
    sqlite3_bind_text(cache_insert_stmt,    5, cp->last_name, -1, SQLITE_TRANSIENT);
@@ -213,13 +218,17 @@ bool callsign_cache_save(calldata_t *cp) {
    sqlite3_bind_int64(cache_insert_stmt,  22, now);
 
    // execute the query
-   if ((rc = sqlite3_step(cache_insert_stmt)) == SQLITE_OK) {
+   rc = sqlite3_step(cache_insert_stmt);
+   log_send(mainlog, LOG_DEBUG, "calldata_cache_save: rc: %d", rc);
+   
+   if (rc == SQLITE_OK) {
       // nothing to do here...
-   } else {
-      log_send(mainlog, LOG_WARNING, "inserting %s into calldata cache failed: %s", cp->callsign, sqlite3_errmsg(calldata_cache->hndl.sqlite3));
+      return true;
+//   } else {
+//      log_send(mainlog, LOG_WARNING, "inserting %s into calldata cache failed: %s", cp->callsign, sqlite3_errmsg(calldata_cache->hndl.sqlite3));
    }
 
-   return true;
+   return false;
 }
 
 calldata_t *callsign_cache_find(const char *callsign) {
@@ -240,20 +249,36 @@ calldata_t *callsign_cache_find(const char *callsign) {
 
    // prepare the statement if it's not been done yet
    if (cache_select_stmt == NULL) {
-      char *sql = "SELECT callsign, dxcc, aliases, first_name, last_name, addr1, addr2, state, zip, grid, country, latitude, longitude, county, class, codes, email, u_views, effective, expires, cache_expires, cache_fetched FROM cache WHERE callsign = ?;";
+//      char *sql = "SELECT callsign, dxcc, aliases, first_name, last_name, addr1, addr2, state, zip, grid, country, latitude, longitude, county, class, codes, email, u_views, effective, expires, cache_expires, cache_fetched FROM cache WHERE callsign = ?;";
+      char *sql = "SELECT * FROM cache WHERE callsign = @CALL;";
       log_send(mainlog, LOG_DEBUG, "sql query: %s", sql);
       rc = sqlite3_prepare(calldata_cache->hndl.sqlite3, sql, -1, &cache_select_stmt, 0);
 
       if (rc == SQLITE_OK) {
-         sqlite3_bind_text(cache_select_stmt, 1, callsign, -1, SQLITE_TRANSIENT);
+         rc = sqlite3_bind_text(cache_select_stmt, sqlite3_bind_parameter_index(cache_select_stmt, "@CALL"), callsign, -1, SQLITE_TRANSIENT);
+         if (rc != SQLITE_OK) {
+            log_send(mainlog, LOG_WARNING, "sqlite3_bind_text cache select callsign failed: %s", sqlite3_errmsg(calldata_cache->hndl.sqlite3));
+            free(cd);
+            return NULL;
+         } else {
+            log_send(mainlog, LOG_DEBUG, "prepared cache SELECT statement succesfully");
+         }
       } else {
          log_send(mainlog, LOG_WARNING, "Error preparing statement for cache select of record for %s: %s\n", callsign, sqlite3_errmsg(calldata_cache->hndl.sqlite3));
          free(cd);
          return NULL;
       }
    } else {	// reset the statement for reuse
-      sqlite3_reset(cache_insert_stmt);
+      sqlite3_reset(cache_select_stmt);
       sqlite3_clear_bindings(cache_select_stmt);
+      rc = sqlite3_bind_text(cache_select_stmt, 1, callsign, -1, SQLITE_TRANSIENT);
+      if (rc != SQLITE_OK) {
+         log_send(mainlog, LOG_WARNING, "sqlite3_bind_text reset cache select callsign failed: %s", sqlite3_errmsg(calldata_cache->hndl.sqlite3));
+         free(cd);
+         return NULL;
+      } else {
+         log_send(mainlog, LOG_DEBUG, "reset cache SELECT statement succesfully");
+      }
    }
 
    int step = sqlite3_step(cache_select_stmt);
@@ -481,11 +506,11 @@ typedef struct sockio {
 } sockio_t;
 
 static bool parse_request(const char *line) {
-//   fprintf(stderr, "stdin_cb: Parsing line: %s\n", line);
+   //fprintf(stderr, "stdin_cb: Parsing line: %s\n", line);
    if (strncasecmp(line, "HELP", 4) == 0) {
       fprintf(stderr, "200 OK\n");
       fprintf(stderr, "*** HELP ***\n");
-     // XXX: Implement NOCACHE
+      // XXX: Implement NOCACHE
       fprintf(stderr, "CALLSIGN [CALLSIGN] [NOCACHE]\tLookup a callsign, (NYI) optionally without using the cache\n");
       // XXX: Implement optional password
       fprintf(stderr, "EXIT\t\t\tShutdown the service\n");

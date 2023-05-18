@@ -499,11 +499,11 @@ bool qrz_start_session(void) {
 
    qrz_user = cfg_get_str(cfg, "callsign-lookup/qrz-username");
    qrz_pass = cfg_get_str(cfg, "callsign-lookup/qrz-password");
-   qrz_api_key = cfg_get_str(cfg, "callsign-lookup/qrz-api-key");
+//   qrz_api_key = cfg_get_str(cfg, "callsign-lookup/qrz-api-key");
    qrz_api_url = cfg_get_str(cfg, "callsign-lookup/qrz-api-url");
 
    // if any settings are missing cry and return error
-   if (qrz_user == NULL || qrz_pass == NULL || qrz_api_key == NULL || qrz_api_url == NULL) {
+   if (qrz_user == NULL || qrz_pass == NULL || qrz_api_url == NULL) {
       log_send(mainlog, LOG_CRIT, "please make sure callsign-lookup/qrz-username qrz-password and qrz-api-key are all set in config.json and try again!");
       return NULL;
    }
@@ -557,11 +557,16 @@ calldata_t *qrz_lookup_callsign(const char *callsign) {
 
    if (http_post(buf, NULL, outbuf, sizeof(outbuf)) != false) {
       qrz_parse_http_data(outbuf, calldata);
+      if (calldata->callsign[0] != '\0') {
+         log_send(mainlog, LOG_INFO, "result for callsign %s returned. cached: %s", calldata->callsign, (calldata->cached ? "true" : "false"));
+      } else {
+         log_send(mainlog, LOG_WARNING, "result for callsign %s returned, but calldata->callsign is NULL... wtf?", callsign);
+         free(calldata);
+         return NULL;
+      }
+   } else {
+      free(calldata);
+      return NULL;
    }
-
-   if (calldata->callsign[0] != '\0') {
-      log_send(mainlog, LOG_INFO, "result for callsign %s returned. cached: %s", calldata->callsign, (calldata->cached ? "true" : "false"));
-   }
-
    return calldata;
 }
