@@ -16,6 +16,8 @@ common_objs += ringbuffer.o
 common_objs += util.o
 common_objs += maidenhead.o	# maidenhead coordinate tools
 
+extra_distclean += etc/calldata-cache.db etc/fcc-uls.db
+
 # Our text user interface library... This will become it's own project once
 # keymap, etc are completed so we can decouple a bit from the user's code.
 tui_objs += tui.o tui-help.o tui-input.o tui-keymap.o tui-menu.o tui-textarea.o

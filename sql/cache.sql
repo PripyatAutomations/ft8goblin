@@ -1,6 +1,6 @@
 create table cache (
    cache_id INTEGER PRIMARY KEY AUTOINCREMENT,
-   callsign VARCHAR(24),
+   callsign VARCHAR(24) UNIQUE,
    dxcc TEXT,
    aliases TEXT,
    first_name TEXT,
@@ -19,5 +19,7 @@ create table cache (
    email TEXT,
    u_views INT,
    effective DATE,
-   expires DATE
+   expires DATE,
+   cache_expires TIMESTAMP,
+   cache_fetched TIMESTAMP
 );

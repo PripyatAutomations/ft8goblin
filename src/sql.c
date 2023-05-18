@@ -31,14 +31,19 @@ Database *sql_open(const char *path) {
        exit(ENOMEM);
     }
 
+    log_send(mainlog, LOG_DEBUG, "sql_open: path: %s", path);
+
     // Is this sqlite3?
     if ((strncasecmp(path, "sqlite3:", 8) == 0)) {
        // open the sqlite database
        db->db_type = DB_SQLITE3;
        int rc = sqlite3_open(path + 8, &db->hndl.sqlite3);
+       log_send(mainlog, LOG_DEBUG, "trying to open sqlite3 database %s", path + 8);
        if (rc != SQLITE_OK) {
           log_send(mainlog, LOG_CRIT, "Error opening calldata cache db %s: %s", path + 8, sqlite3_errmsg(db->hndl.sqlite3));
           exit(ENOSYS);
+       } else {
+          log_send(mainlog, LOG_INFO, "opened sqlite3 database %s succesfully", path + 8);
        }
     } else if ((strncasecmp(path, "postgres:", 8) == 0) || (strncasecmp(path, "pgsql:", 6) == 0)) {
        // open postgresql database

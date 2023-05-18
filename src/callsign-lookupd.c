@@ -38,11 +38,12 @@ typedef struct {
 // globals.. yuck ;)
 static bool callsign_use_uls = false, callsign_use_qrz = false, callsign_initialized = false, callsign_use_cache = false;
 static const char *callsign_cache_db = NULL;
-static time_t callsign_cache_expiry = -1;
+static time_t callsign_cache_expiry = 86400 * 7;		// a week
 static bool callsign_keep_stale_offline = false;
 static Database *calldata_cache = NULL, *calldata_uls = NULL;
 static int callsign_max_requests = 0, callsign_ttl_requests = 0;
 static sqlite3_stmt *cache_insert_stmt = NULL;
+static sqlite3_stmt *cache_select_stmt = NULL;
 
 // common shared things for our library
 const char *progname = "callsign-lookupd";
@@ -63,6 +64,14 @@ bool str2bool(const char *str, bool def) {
 }
 
 static void fini(void) {
+   if (cache_insert_stmt != NULL) {
+      sqlite3_finalize(cache_insert_stmt);
+   }
+
+   if (cache_select_stmt != NULL) {
+      sqlite3_finalize(cache_select_stmt);
+   }
+
    exit(0);
 }
 
@@ -88,23 +97,44 @@ static void callsign_lookup_setup(void) {
       callsign_use_qrz = false;
    }
 
-   // is cache database configured?
-   s = cfg_get_str(cfg, "callsign-lookup/cache-db");
-   if (s == NULL) {
-      log_send(mainlog, LOG_CRIT, "callsign_lookup_setup: Failed to find cache-db in config! Disabling cache...");
-   } else {
-      callsign_cache_db = s;
-      callsign_cache_expiry = timestr2time_t(cfg_get_str(cfg, "callsign-lookup/cache-expiry"));
-      callsign_keep_stale_offline = str2bool(cfg_get_str(cfg, "callsign-lookup/cache-keep-stale-if-offline"), false);
+   // use QRZ XML API?
+   s = cfg_get_str(cfg, "callsign-lookup/use-qrz");
 
-      if ((calldata_cache = sql_open(callsign_cache_db)) == NULL) {
-         log_send(mainlog, LOG_CRIT, "callsign_lookup_setup: failed opening cache %s! Disabling caching!", callsign_cache_db);
-         callsign_use_cache = false;
+   if (strncasecmp(s, "true", 4) == 0) {
+      callsign_use_qrz = true;
+   } else {
+      callsign_use_qrz = false;
+   }
+
+   // Use local cache db?
+   s = cfg_get_str(cfg, "callsign-lookup/use-cache");
+
+   if (strncasecmp(s, "true", 4) == 0) {
+      callsign_use_cache = true;
+   } else {
+      callsign_use_cache = false;
+   }
+
+   if (callsign_use_cache) {
+      // is cache database configured?
+      s = cfg_get_str(cfg, "callsign-lookup/cache-db");
+      if (s == NULL) {
+         log_send(mainlog, LOG_CRIT, "callsign_lookup_setup: Failed to find cache-db in config! Disabling cache...");
       } else {
-         // cache database was succesfully opened
-         // XXX: Detect if we need to initialize it -- does table cache exist?
-         // XXX: Initialize the tables using sql in sql/cache.sql
-         callsign_use_cache = true;
+         callsign_cache_db = s;
+         callsign_cache_expiry = timestr2time_t(cfg_get_str(cfg, "callsign-lookup/cache-expiry"));
+         callsign_keep_stale_offline = str2bool(cfg_get_str(cfg, "callsign-lookup/cache-keep-stale-if-offline"), false);
+
+         if ((calldata_cache = sql_open(callsign_cache_db)) == NULL) {
+            log_send(mainlog, LOG_CRIT, "callsign_lookup_setup: failed opening cache %s! Disabling caching!", callsign_cache_db);
+            callsign_use_cache = false;
+            calldata_cache = NULL;
+         } else {
+            // cache database was succesfully opened
+            // XXX: Detect if we need to initialize it -- does table cache exist?
+            // XXX: Initialize the tables using sql in sql/cache.sql
+            log_send(mainlog, LOG_INFO, "calldata cache database opened");
+         }
       }
    }
 
@@ -127,15 +157,25 @@ bool callsign_cache_save(calldata_t *cp) {
       return false;
    }
 
+   // if caching is disabled, act like it successfully saved
+   if (callsign_use_cache == false) {
+      return true;
+   }
+
    // did someone forget to call callsign_lookup_setup() or edit config.json properly?? hmm...
    if (calldata_cache == NULL) {
       log_send(mainlog, LOG_DEBUG, "callsign_cache_save: called but calldata_cache == NULL...");
       return false;
    }
 
-/*
+   // dont cache ULS data as it's already in a database...
+   if (cp->origin == DATASRC_ULS) {
+      return false;
+   }
+
+   // initialize or reset prepared statement as needed
    if (cache_insert_stmt == NULL) {
-      const char *sql = "INSERT INTO cache (callsign, dxcc, aliases, first_name, last_name, addr1, addr2, state, zip, grid, country, latitude, longitude, county, class, codes, email, u_views, effective, expires) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
+      const char *sql = "INSERT INTO cache (callsign, dxcc, aliases, first_name, last_name, addr1, addr2, state, zip, grid, country, latitude, longitude, county, class, codes, email, u_views, effective, expires, cache_expires, cache_fetched) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
       rc = sqlite3_prepare_v2(calldata_cache->hndl.sqlite3, sql , -1, &cache_insert_stmt, 0);
 
@@ -148,6 +188,7 @@ bool callsign_cache_save(calldata_t *cp) {
       sqlite3_clear_bindings(cache_insert_stmt);
    }
 
+   // bind variables
    sqlite3_bind_text(cache_insert_stmt,    1, cp->callsign, -1, SQLITE_TRANSIENT);
    sqlite3_bind_int(cache_insert_stmt,     2, cp->dxcc);
    sqlite3_bind_text(cache_insert_stmt,    3, cp->aliases, -1, SQLITE_TRANSIENT);
@@ -168,6 +209,8 @@ bool callsign_cache_save(calldata_t *cp) {
    sqlite3_bind_int(cache_insert_stmt,    18, cp->qrz_views);
    sqlite3_bind_int64(cache_insert_stmt,  19, cp->license_effective);
    sqlite3_bind_int64(cache_insert_stmt,  20, cp->license_expiry);
+   sqlite3_bind_int64(cache_insert_stmt,  21, now + callsign_cache_expiry);
+   sqlite3_bind_int64(cache_insert_stmt,  22, now);
 
    // execute the query
    if ((rc = sqlite3_step(cache_insert_stmt)) == SQLITE_OK) {
@@ -175,25 +218,57 @@ bool callsign_cache_save(calldata_t *cp) {
    } else {
       log_send(mainlog, LOG_WARNING, "inserting %s into calldata cache failed: %s", cp->callsign, sqlite3_errmsg(calldata_cache->hndl.sqlite3));
    }
-   sqlite3_finalize(cache_insert_stmt);
-*/
-   char sqlbuf[16385];
-   memset(sqlbuf, 0, 16385);
 
-   snprintf(sqlbuf, 16385, "INSERT INTO cache (callsign, dxcc, aliases, first_name, last_name, addr1, addr2, state, zip, grid, country, latitude, longitude, county, class, codes, email, u_views, effective, expires) VALUES ( '%s', %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, '%s', '%s', '%s', '%s', %lu, %lu, %lu );",
-      cp->callsign, cp->dxcc, cp->aliases, 
-      cp->first_name, cp->last_name, cp->address1,
-      cp->address2, cp->state, cp->zip,
-      cp->grid, cp->country, cp->latitude, cp->longitude,
-      cp->county, cp->opclass, cp->codes, cp->email,
-      cp->qrz_views, cp->license_effective, cp->license_expiry);
-
-   sqlite3_exec(calldata_cache->hndl.sqlite3, sqlbuf, NULL, NULL, NULL);
-   return false;
+   return true;
 }
 
 calldata_t *callsign_cache_find(const char *callsign) {
-   return NULL;
+   calldata_t *cd = NULL;
+   int rc = -1;
+
+   // if no callsign given, bail
+   if (callsign == NULL) {
+      log_send(mainlog, LOG_CRIT, "callsign_cache_find: callsign == NULL");
+      return NULL;
+   }
+
+   // try to allocate memory for the calldata_t structure
+   if ((cd = malloc(sizeof(calldata_t))) == NULL) {
+      fprintf(stderr, "callsign_cache_find: out of memory!\n");
+      exit(ENOMEM);
+   }
+
+   // prepare the statement if it's not been done yet
+   if (cache_select_stmt == NULL) {
+      char *sql = "SELECT callsign, dxcc, aliases, first_name, last_name, addr1, addr2, state, zip, grid, country, latitude, longitude, county, class, codes, email, u_views, effective, expires, cache_expires, cache_fetched FROM cache WHERE callsign = ?;";
+      log_send(mainlog, LOG_DEBUG, "sql query: %s", sql);
+      rc = sqlite3_prepare(calldata_cache->hndl.sqlite3, sql, -1, &cache_select_stmt, 0);
+
+      if (rc == SQLITE_OK) {
+         sqlite3_bind_text(cache_select_stmt, 1, callsign, -1, SQLITE_TRANSIENT);
+      } else {
+         log_send(mainlog, LOG_WARNING, "Error preparing statement for cache select of record for %s: %s\n", callsign, sqlite3_errmsg(calldata_cache->hndl.sqlite3));
+         free(cd);
+         return NULL;
+      }
+   } else {	// reset the statement for reuse
+      sqlite3_reset(cache_insert_stmt);
+      sqlite3_clear_bindings(cache_select_stmt);
+   }
+
+   int step = sqlite3_step(cache_select_stmt);
+    
+   if (step == SQLITE_ROW) {
+      // XXX: Process the row, should only be one...
+      log_send(mainlog, LOG_DEBUG, "got row");
+   } else {
+      //
+      log_send(mainlog, LOG_DEBUG, "no rows");
+      free(cd);
+      return NULL;
+   }
+
+   return cd;
 }
 
 calldata_t *callsign_lookup(const char *callsign) {
@@ -205,25 +280,25 @@ calldata_t *callsign_lookup(const char *callsign) {
       callsign_lookup_setup();
    }
 
-   // Look in cache first
-   if ((qr = callsign_cache_find(callsign)) != NULL) {
+   // If enabled, Look in cache first
+   if (callsign_use_cache && (qr = callsign_cache_find(callsign)) != NULL) {
       log_send(mainlog, LOG_DEBUG, "got cached calldata for %s", callsign);
       from_cache = true;
    }
 
-   // nope, check FCC ULS next since it's local
-   if (qr == NULL) {
-      qr = uls_lookup_callsign(callsign);
-      if (qr != NULL) {
-         log_send(mainlog, LOG_DEBUG, "got uls calldata for %s", callsign);
-      }
-   }
-
    // nope, check QRZ XML API, if the user has an account
-   if (qr == NULL) {
+   if (callsign_use_qrz && qr == NULL) {
       qr = qrz_lookup_callsign(callsign);
       if (qr != NULL) {
          log_send(mainlog, LOG_DEBUG, "got qrz calldata for %s", callsign);
+      }
+   }
+
+   // nope, check FCC ULS next since it's available offline
+   if (callsign_use_uls && qr == NULL) {
+      qr = uls_lookup_callsign(callsign);
+      if (qr != NULL) {
+         log_send(mainlog, LOG_DEBUG, "got uls calldata for %s", callsign);
       }
    }
 
@@ -236,7 +311,7 @@ calldata_t *callsign_lookup(const char *callsign) {
    // only save it in cache if it did not come from there already
    if (!from_cache) {
       log_send(mainlog, LOG_DEBUG, "adding new item (%s) to cache", callsign);
-//      callsign_cache_save(qr);
+      callsign_cache_save(qr);
       return qr;
    }
 
@@ -545,7 +620,7 @@ int main(int argc, char **argv) {
          exit(EACCES);
       }
    }
-   printf("+OK %s/%s ready to answer requests. QRZ: %s, ULS: %s, GNIS: %s\n", progname, VERSION, (callsign_use_qrz ? "On" : "Off"), (callsign_use_uls ? "On" : "Off"), (use_gnis ? "On" : "Off"));
+   printf("+OK %s/%s ready to answer requests. QRZ: %s, ULS: %s, GNIS: %s, Cache: %s\n", progname, VERSION, (callsign_use_qrz ? "On" : "Off"), (callsign_use_uls ? "On" : "Off"), (use_gnis ? "On" : "Off"), (callsign_use_cache ? "On" : "Off"));
 
    // if called with callsign(s) as args, look them up, return the parsed output and exit
    if (argc > 1) {
@@ -566,6 +641,7 @@ int main(int argc, char **argv) {
          free(calldata);
          calldata = NULL;
       }
+      fprintf(stderr, "+GOODBYE Hope you had a nice session! Exiting.\n");
 
       dying = true;
    }
@@ -582,7 +658,6 @@ int main(int argc, char **argv) {
       sql_close(calldata_cache);
       calldata_cache = NULL;
    }
-
    if (calldata_uls != NULL) {
       sql_close(calldata_uls);
       calldata_uls = NULL;

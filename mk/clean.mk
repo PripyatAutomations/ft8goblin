@@ -1,4 +1,5 @@
 distclean: clean
+	${RM} -f ${extra_distclean}
 
 clean:
 	@echo "Cleaning..."

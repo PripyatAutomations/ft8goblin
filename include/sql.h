@@ -14,10 +14,9 @@ extern "C" {
           DB_MYSQL
        } db_type;
 
-       union {
+       struct {
          sqlite3 *sqlite3;
        } hndl;
-       // 
     } Database;
 
     extern Database *sql_open(const char *path);
