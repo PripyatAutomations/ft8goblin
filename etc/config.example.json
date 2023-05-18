@@ -37,6 +37,7 @@
       "record-callsign-lookup": "true"
     },
     "callsign-lookup": {
+      "respawn-after-requests": 1000,
       "use-uls": "true",
       "fcc-uls-database": "fcc-uls.db",
       "use-qrz": "false",

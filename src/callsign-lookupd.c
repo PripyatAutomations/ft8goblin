@@ -10,6 +10,7 @@
 //	QRZ XML API
 //
 // We then need to save it to the cache (if it didn't come from there already)
+// XXX: We need to make this capable of talking on stdio or via a socket
 #include "config.h"
 #include <stdbool.h>
 #include <stdint.h>
@@ -26,19 +27,22 @@
 #include "qrz-xml.h"
 #include "sql.h"
 
-
+// Local types.. Gross!
 #define BUFFER_SIZE 1024
 typedef struct {
-    char buffer[BUFFER_SIZE];
-    size_t length;
+   char		buffer[BUFFER_SIZE];
+   size_t 	length;
+   int		fd;
 } InputBuffer;
 
-
+// globals.. yuck ;)
 static bool callsign_use_uls = false, callsign_use_qrz = false, callsign_initialized = false, callsign_use_cache = false;
 static const char *callsign_cache_db = NULL;
 static time_t callsign_cache_expiry = -1;
 static bool callsign_keep_stale_offline = false;
 static Database *calldata_cache = NULL, *calldata_uls = NULL;
+static int callsign_max_requests = 0, callsign_ttl_requests = 0;
+static sqlite3_stmt *cache_insert_stmt = NULL;
 
 // common shared things for our library
 const char *progname = "callsign-lookupd";
@@ -56,6 +60,10 @@ bool str2bool(const char *str, bool def) {
    }
 
    return def;
+}
+
+static void fini(void) {
+   exit(0);
 }
 
 // Load the configuration (cfg_get_str(...)) into *our* configuration locals
@@ -80,7 +88,7 @@ static void callsign_lookup_setup(void) {
       callsign_use_qrz = false;
    }
 
-
+   // is cache database configured?
    s = cfg_get_str(cfg, "callsign-lookup/cache-db");
    if (s == NULL) {
       log_send(mainlog, LOG_CRIT, "callsign_lookup_setup: Failed to find cache-db in config! Disabling cache...");
@@ -99,48 +107,153 @@ static void callsign_lookup_setup(void) {
          callsign_use_cache = true;
       }
    }
+
+   // should the process die with status 0 after X requests and be restarted?
+   callsign_max_requests = cfg_get_int(cfg, "callsign-lookup/respawn-after-requests");
+
+   // if invalid value, disable this feature
+   if (callsign_max_requests < 0) {
+      callsign_max_requests = 0;
+   }
 }
    
 // save a callsign record to the cache
 bool callsign_cache_save(calldata_t *cp) {
-    return false;
+   // Here we insert into the SQL table, for now only sqlite3 is supported but this shouldnt be the case...
+   int rc = 0;
+
+   if (cp == NULL) {
+      log_send(mainlog, LOG_DEBUG, "callsign_cache_save: called with NULL calldata pointer...");
+      return false;
+   }
+
+   // did someone forget to call callsign_lookup_setup() or edit config.json properly?? hmm...
+   if (calldata_cache == NULL) {
+      log_send(mainlog, LOG_DEBUG, "callsign_cache_save: called but calldata_cache == NULL...");
+      return false;
+   }
+
+/*
+   if (cache_insert_stmt == NULL) {
+      const char *sql = "INSERT INTO cache (callsign, dxcc, aliases, first_name, last_name, addr1, addr2, state, zip, grid, country, latitude, longitude, county, class, codes, email, u_views, effective, expires) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? );";
+
+      rc = sqlite3_prepare_v2(calldata_cache->hndl.sqlite3, sql , -1, &cache_insert_stmt, 0);
+
+      if (rc != SQLITE_OK) {
+         sqlite3_reset(cache_insert_stmt);
+         log_send(mainlog, LOG_WARNING, "Error preparing statement for cache insert of record for %s: %s\n", cp->callsign, sqlite3_errmsg(calldata_cache->hndl.sqlite3));
+      }
+   } else {
+      sqlite3_reset(cache_insert_stmt);
+      sqlite3_clear_bindings(cache_insert_stmt);
+   }
+
+   sqlite3_bind_text(cache_insert_stmt,    1, cp->callsign, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_int(cache_insert_stmt,     2, cp->dxcc);
+   sqlite3_bind_text(cache_insert_stmt,    3, cp->aliases, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt,    4, cp->first_name, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt,    5, cp->last_name, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt,    6, cp->address1, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt,    7, cp->address2, -1, SQLITE_TRANSIENT); 
+   sqlite3_bind_text(cache_insert_stmt,    8, cp->state, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt,    9, cp->zip, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt,   10, cp->grid, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt,   11, cp->country, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_double(cache_insert_stmt, 12, cp->latitude);
+   sqlite3_bind_double(cache_insert_stmt, 13, cp->longitude);
+   sqlite3_bind_text(cache_insert_stmt,   14, cp->county, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt,   15, cp->opclass, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt,   16, cp->codes, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt,   17, cp->email, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_int(cache_insert_stmt,    18, cp->qrz_views);
+   sqlite3_bind_int64(cache_insert_stmt,  19, cp->license_effective);
+   sqlite3_bind_int64(cache_insert_stmt,  20, cp->license_expiry);
+
+   // execute the query
+   if ((rc = sqlite3_step(cache_insert_stmt)) == SQLITE_OK) {
+      // nothing to do here...
+   } else {
+      log_send(mainlog, LOG_WARNING, "inserting %s into calldata cache failed: %s", cp->callsign, sqlite3_errmsg(calldata_cache->hndl.sqlite3));
+   }
+   sqlite3_finalize(cache_insert_stmt);
+*/
+   char sqlbuf[16385];
+   memset(sqlbuf, 0, 16385);
+
+   snprintf(sqlbuf, 16385, "INSERT INTO cache (callsign, dxcc, aliases, first_name, last_name, addr1, addr2, state, zip, grid, country, latitude, longitude, county, class, codes, email, u_views, effective, expires) VALUES ( '%s', %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %f, %f, '%s', '%s', '%s', '%s', %lu, %lu, %lu );",
+      cp->callsign, cp->dxcc, cp->aliases, 
+      cp->first_name, cp->last_name, cp->address1,
+      cp->address2, cp->state, cp->zip,
+      cp->grid, cp->country, cp->latitude, cp->longitude,
+      cp->county, cp->opclass, cp->codes, cp->email,
+      cp->qrz_views, cp->license_effective, cp->license_expiry);
+
+   sqlite3_exec(calldata_cache->hndl.sqlite3, sqlbuf, NULL, NULL, NULL);
+   return false;
 }
 
 calldata_t *callsign_cache_find(const char *callsign) {
-    return NULL;
+   return NULL;
 }
 
 calldata_t *callsign_lookup(const char *callsign) {
-    bool from_cache = false;
-    calldata_t *qr = NULL;
+   bool from_cache = false;
+   calldata_t *qr = NULL;
 
-    if (!callsign_initialized) {
-       callsign_lookup_setup();
-    }
+   // has callsign_lookup_setup() been called yet?
+   if (!callsign_initialized) {
+      callsign_lookup_setup();
+   }
 
-    // Look in cache
-    if ((qr = callsign_cache_find(callsign)) != NULL) {
-       from_cache = true;
-       return qr;
-    }
+   // Look in cache first
+   if ((qr = callsign_cache_find(callsign)) != NULL) {
+      log_send(mainlog, LOG_DEBUG, "got cached calldata for %s", callsign);
+      from_cache = true;
+   }
 
-    // nope, check FCC ULS
-    if (qr == NULL) {
-       qr = uls_lookup_callsign(callsign);
-    }
+   // nope, check FCC ULS next since it's local
+   if (qr == NULL) {
+      qr = uls_lookup_callsign(callsign);
+      if (qr != NULL) {
+         log_send(mainlog, LOG_DEBUG, "got uls calldata for %s", callsign);
+      }
+   }
 
-    // nope, check QRZ XML API
-    if (qr == NULL) {
-       qr = qrz_lookup_callsign(callsign);
-    }
+   // nope, check QRZ XML API, if the user has an account
+   if (qr == NULL) {
+      qr = qrz_lookup_callsign(callsign);
+      if (qr != NULL) {
+         log_send(mainlog, LOG_DEBUG, "got qrz calldata for %s", callsign);
+      }
+   }
 
-    // only save it in cache if it did not come from there already
-    if (!from_cache) {
-       callsign_cache_save(qr);
-       return qr;
-    }
+   // no results :(
+   if (qr == NULL) {
+      log_send(mainlog, LOG_WARNING, "no matches found for callsign %s", callsign);
+      return NULL;
+   }
 
-    return NULL;
+   // only save it in cache if it did not come from there already
+   if (!from_cache) {
+      log_send(mainlog, LOG_DEBUG, "adding new item (%s) to cache", callsign);
+//      callsign_cache_save(qr);
+      return qr;
+   }
+
+   // increment total requests counter
+   callsign_ttl_requests++;
+
+   // is max_requests set?
+   if (callsign_max_requests > 0) {
+      // have we met/exceeded it?
+      if (callsign_ttl_requests >= callsign_max_requests) {
+         log_send(mainlog, LOG_CRIT, "answered %d of %d allowed requests, exiting", callsign_ttl_requests, callsign_max_requests);
+         // XXX: Dump CPU and memory statistics to the log, so we can look for leaks and profile
+         // XXX: req/sec, etc too
+         fini();
+      }
+   }
+   return NULL;
 }
 
 static void exit_fix_config(void) {
@@ -294,9 +407,19 @@ typedef struct sockio {
 
 static bool parse_request(const char *line) {
 //   fprintf(stderr, "stdin_cb: Parsing line: %s\n", line);
-   // XXX: Here we need to parse commands from stdin
-   if (strncasecmp(line, "LOOKUP ", 7) == 0) {
-      const char *callsign = line + 7;
+   if (strncasecmp(line, "HELP", 4) == 0) {
+      fprintf(stderr, "200 OK\n");
+      fprintf(stderr, "*** HELP ***\n");
+     // XXX: Implement NOCACHE
+      fprintf(stderr, "CALLSIGN [CALLSIGN] [NOCACHE]\tLookup a callsign, (NYI) optionally without using the cache\n");
+      // XXX: Implement optional password
+      fprintf(stderr, "EXIT\t\t\tShutdown the service\n");
+      fprintf(stderr, "GOODBYE\t\tDisconnect from the service, leaving it running\n");
+      fprintf(stderr, "HELP\t\t\tThis message\n");
+      fprintf(stderr, "*** Planned ***\n");
+      fprintf(stderr, "GNIS [GRID|COORDS]\t\tLook up the place name for a grid or WGS-84 coordinate\n");
+   } else if (strncasecmp(line, "CALLSIGN", 8) == 0) {
+      const char *callsign = line + 9;
 
       calldata_t *calldata = callsign_lookup(callsign);
 
@@ -311,9 +434,18 @@ static bool parse_request(const char *line) {
       }
       free(calldata);
       calldata = NULL;
+   } else if (strncasecmp(line, "EXIT", 4) == 0) {
+      log_send(mainlog, LOG_CRIT, "Got EXIT from client. Goodbye!");
+      fprintf(stderr, "+GOODBYE Hope you had a nice session! Exiting.\n");
+      fini();
+   } else if (strncasecmp(line, "GOODBYE", 7) == 0) {
+      log_send(mainlog, LOG_NOTICE, "Got GOODBYE from client. Disconnecting it.");
+      fprintf(stderr, "+GOODBYE Hope you had a nice session!\n");
+      // XXX: Disconnect client
+      // XXX: Free the client
    } else {
-      fprintf(stderr, "500 Your client sent a request I do not understand... Try again!\n");
-      // XXX: we should keep track of invalid requests and eventually punt the client...
+      fprintf(stderr, "400 Bad Request - Your client sent a request I do not understand... Try again!\n");
+      // XXX: we should keep track of invalid requests and eventually punt the client...?
    }
    
    return false;
@@ -321,8 +453,8 @@ static bool parse_request(const char *line) {
 
 static void stdin_cb(EV_P_ ev_io *w, int revents) {
     if (EV_ERROR & revents) {
-        fprintf(stderr, "Error event in stdin watcher\n");
-        return;
+       fprintf(stderr, "Error event in stdin watcher\n");
+       return;
     }
 
     InputBuffer *input = (InputBuffer *)w->data;
@@ -334,10 +466,13 @@ static void stdin_cb(EV_P_ ev_io *w, int revents) {
     }
 
     if (bytesRead == 0) {
-        // End of file (Ctrl+D pressed)
-        ev_io_stop(EV_A, w);
-        free(input);
-        return;
+       // End of file (Ctrl+D pressed)
+       ev_io_stop(EV_A, w);
+       free(input);
+       log_send(mainlog, LOG_CRIT, "got ^D (EOF), exiting!");
+       fprintf(stderr, "+GOODBYE Hope you had a nice session! Exiting.\n");
+       fini();
+       return;
     }
 
     input->length += bytesRead;
@@ -345,16 +480,16 @@ static void stdin_cb(EV_P_ ev_io *w, int revents) {
     // Process complete lines
     char *newline;
     while ((newline = strchr(input->buffer, '\n')) != NULL) {
-        *newline = '\0';  // Replace newline character with null terminator
-        parse_request(input->buffer);
-        memmove(input->buffer, newline + 1, input->length - (newline - input->buffer));
-        input->length -= (newline - input->buffer) + 1;
+       *newline = '\0';  // Replace newline character with null terminator
+       parse_request(input->buffer);
+       memmove(input->buffer, newline + 1, input->length - (newline - input->buffer));
+       input->length -= (newline - input->buffer) + 1;
     }
 
     // If buffer is full and no newline is found, consider it an incomplete line
     if (input->length == BUFFER_SIZE) {
-        fprintf(stderr, "Input buffer full, discarding incomplete line: %s\n", input->buffer);
-        input->length = 0;  // Discard the incomplete line
+       fprintf(stderr, "Input buffer full, discarding incomplete line: %s\n", input->buffer);
+       input->length = 0;  // Discard the incomplete line
     }
 }
 
@@ -453,7 +588,7 @@ int main(int argc, char **argv) {
       calldata_uls = NULL;
    }
 
-   //
+   // XXX: get rid of this in favor of per-socket buffers, if we go that route...
    if (input != NULL) {
       free(input);
       input = NULL;

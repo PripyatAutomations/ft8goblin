@@ -12,20 +12,14 @@ if [ "$1" == "-g" ]; then
    use_gdb=y
 fi
 
-# Add ./lib to the library search path
-export LD_LIBRARY_PATH=./lib:${LD_LIBRARY_PATH}
-
-# Some logging stuff
-####################
-# redirect gcc sanitizer outputs to files
-extern ASAN_OPTIONS="log_path=logs/asan.log"
-extern UBSAN_OPTIONS="log_path=logs/ubsan.log"
-
 # Reset the tty
 reset
 
 # Clear old log files
-rm -f logs/*.log
+rm -f logs/*
+
+# Clean up run/
+rm -f run/*
 
 # Check if we haven't git pull'd in ${git_check_time}
 git_check_time=3600
@@ -36,12 +30,13 @@ last_timestamp=0
 [ ! -f .git_timestamp ] && echo ${timestamp} > .git_timestamp
 
 ts_diff=$((${timestamp}-${last_timestamp}))
+rebuild_needed=n
 
 echo "Last git pull was $ts_diff seconds ago. Automatic pull after $git_check_time seconds..."
 if [ $ts_diff -gt $git_check_time ]; then
    # can we reach github?
    echo "Trying to ping github to see if it's reachable..."
-   ping -c3 github.com
+   ping -c 3 github.com
    if [ $? -eq 0 ]; then
       git pull || echo "Couldn't git pull.. Are you online? Try again later!"
       # save timestamp, so we won't try again for awhile...
@@ -51,15 +46,68 @@ if [ $ts_diff -gt $git_check_time ]; then
    fi
 fi
 
+#########
+# Add ./lib to the library search path
+export LD_LIBRARY_PATH=./lib:${LD_LIBRARY_PATH}
+
+# Some logging stuff
+####################
+# redirect gcc sanitizer outputs to files
+export ASAN_OPTIONS="log_path=logs/asan.log"
+export UBSAN_OPTIONS="log_path=logs/ubsan.log"
+
 # rebuild things or exit if failure
 echo "Hang on, we need to compile things... This should only take a moment."
 make clean || exit 2
 make -j${NPROC} world || exit 1
 
+echo "Preparing some databases..."
+# Does calldata cache db exist?
+if [ ! -f "etc/calldata-cache.db" ]; then
+   echo "* Initializing etc/calldata-cache.db"
+   sqlite3 etc/calldata-cache.db < sql/cache.sql 
+fi
+
+# Does FCC ULS database exist?
+if [ ! -f "etc/fcc-uls.db" ]; then
+   # Does the FCC data exist?
+   # XXX: Check if it's over a week old and if so, update it, if possible
+   if [ ! -f "data-sources/fcc-uls/fcc_uls_amateur/EN.dat" ]; then
+      # Can we ping the server?
+      ping -c 3 data.fcc.gov
+      if [ $? -ne 0 ]; then
+         echo "* Can't reach data.fcc.gov, skipping download and build of fcc uls"
+      else
+         echo "* Fetching FCC ULS data"
+         ./data-sources/fcc-uls/fetch.sh
+      fi
+   fi
+   if [ -f "data-sources/fcc-uls/fcc_uls_amateur/EN.dat" ]; then
+     echo "* Importing FCC ULS database, this will take a few minutes"
+     ./scripts/uls2db.pl
+   else
+      echo "**********************"
+      echo "* Looks like the download or unpacking of the FCC ULS data failed. I can't find EN.dat!"
+      exit 1
+   fi
+fi
+
+echo "Starting ft8goblin! Please use responsibly."
 # Start ft8goblin, if build was successful
 if [ "${use_gdb}" == "y" ]; then
    gdb -e .gdbscript ./bin/ft8goblin
 else
    ./bin/ft8goblin
 fi
+last_exit=$?
 
+# If ft8goblin crashes, it messes up the terminal, so reset it
+reset
+
+# Give a notice about logfiles
+echo "Goodbye! Please check logs/ for useful output, in particular pay attention to ?san.log.* which are sanitizer log output as they indicate crashes/major bugs"
+echo "If you don't understand the output, drop by irc.efnet.org in #hamradio and share the logs via a pastebin of some sort."
+
+if [ $last_exit -ne 0 ]; then
+   echo "* gdb or ft8goblin exited with non-zero status. This general indicates an error. Check the logs!"
+fi

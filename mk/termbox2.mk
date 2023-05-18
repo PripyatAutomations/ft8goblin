@@ -1,7 +1,7 @@
 ################################
 # Support for building termbox #
 ################################
-termbox2 := lib/libtermbox2.so
+termbox2 := lib/libtermbox2.so.${termbox_lib_ver}
 
 termbox2: ${termbox2}
 

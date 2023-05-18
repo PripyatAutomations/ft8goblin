@@ -1,6 +1,5 @@
 # Are we building debug? y or n.
 DEBUG=y
-
 PREFIX ?= /usr
 PULSEAUDIO=y
 ALSA=y
@@ -20,17 +19,16 @@ flac_streamerd_libs +=
 sigcapd_libs += uhd rtlsdr uhd rtlsdr hamlib
 callsign_lookupd_libs := m curl sqlite3
 
-WARN_FLAGS := -Wall -pedantic -Wno-unused-variable -Wno-unused-function #-Wno-missing-braces
-
 # If building DEBUG release
 ifeq (${DEBUG},y)
+WARN_FLAGS := -Wall -pedantic -Wno-unused-variable -Wno-unused-function #-Wno-missing-braces
 ERROR_FLAGS += -Werror 
 # Sanitizer options
 SAN_FLAGS := -fsanitize=address
 OPT_FLAGS += -ggdb3 -fno-omit-frame-pointer
-OPT_FLAGS := -O2
-CFLAGS += ${SAN_FLAGS} ${WARN_FLAGS} ${ERROR_FLAGS} ${OPT_FLAGS} -DDEBUG=1
 endif
+OPT_FLAGS += -O2
+CFLAGS += ${SAN_FLAGS} ${WARN_FLAGS} ${ERROR_FLAGS} ${OPT_FLAGS} -DDEBUG=1
 
 C_STD := -std=gnu11
 CXX_STD := -std=gnu++17

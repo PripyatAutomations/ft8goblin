@@ -366,14 +366,11 @@ bool qrz_parse_http_data(const char *buf, calldata_t *calldata) {
             memset(efdate_buf, 0, efdate_len + 1);
             memcpy(efdate_buf, efdate, efdate_len);
 
-            log_send(mainlog, LOG_INFO, "efdate: %p, efdate_end: %p, efdate_len: %lu, efdate_buf: %s", efdate, efdate_end, efdate_len, efdate_buf);
-
             memset(&tm, 0, sizeof(struct tm));
             if ((strptime(efdate_buf, "%Y-%m-%d", &tm)) == NULL) {
                log_send(mainlog, LOG_WARNING, "parsing efdate from qrz failed: %d: %s", errno, strerror(errno));
             } else {
                eftime = mktime(&tm);
-               log_send(mainlog, LOG_INFO, "eftime: %lu now: %lu", eftime, now);
                calldata->license_effective = eftime;
             }
          }

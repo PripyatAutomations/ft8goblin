@@ -38,8 +38,10 @@ logs/*.log
 logs/*.debug
 
 # runtime created files that dont need to persist
+run/*
 run/*.pid
 run/*.pipe
+run/*.sock
 
 # Database sources are large and can be dealt with by the builder...
 data-sources/fcc-uls/fcc_uls_*/*

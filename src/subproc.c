@@ -288,6 +288,7 @@ int subproc_killall(int signum) {
    int i = 0;
    for (i = 0; i <= MAX_SUBPROC; i++) {
       subproc_t *sp = children[i];
+
       if (sp == NULL) {
          continue;
       }

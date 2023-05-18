@@ -15,13 +15,30 @@ If you'd like to use postgresql:
 	postgresql-pgrouting postgresql-pgrouting-scripts postgis
 
 These are the devuan/debian names for them, your distro may vary.
+Some of these probably aren't required.. I'll clean the lists up when I
+release this mess...
 
 BUILDING
 --------
+Edit config.mk to reflect any desired build-time optional configuration
 
-Try 'make clean world' to build.
+There's no need to manually build things unless intending to do an
+(UNSUPPORTED AT THIS TIME!) host installation.
 
-You'll need sudo access to install termbox2, if it's not already installed.
+RUNNING
+-------
+./startup
+
+This script handles a handle of startup tasks for you:
+	* set up logging and debug options
+	* git pull for latest version, only if it's been over an hour
+          we can ping github.com
+	* setup library paths for ./lib/
+	* cleaning and recompiling (this should take under a minute even on
+	  older machines
+	* Deleting old log files in log/
+	* Cleaning up run/
+	* launching ./bin/ft8goblin, optionally (if -g passed) under GDB debugger
 
 EXTERNAL DATA
 -------------

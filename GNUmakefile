@@ -4,6 +4,7 @@ bins := ft8goblin decoderd-ft8 encoderd-ft8 sigcapd callsign-lookupd flac-stream
 
 include mk/config.mk
 include mk/ft8lib.mk
+include mk/termbox2.mk
 
 common_objs += config.o
 common_objs += daemon.o
@@ -69,7 +70,7 @@ extra_clean += ${real_bins} ${ft8lib} ${ft8lib_objs}
 qrztest: qrztest2.c
 	gcc -o $@ $< -lxml2 -lcurl -I/usr/include/libxml2
 
-bin/ft8goblin: ${ft8goblin_real_objs} ${termbox2}
+bin/ft8goblin: ${ft8goblin_real_objs} | lib/libtermbox2.so
 	@echo "[Linking] $@"
 	@${CC} -o $@ ${ft8goblin_real_objs} ${ft8goblin_ldflags} ${LDFLAGS}
 
@@ -110,7 +111,6 @@ obj/tui-menu.o: src/tui-menu.c
 	@${CC} ${CFLAGS} -o $@ -c $< -Wno-error=int-conversion -Wno-missing-braces
 
 include mk/compile.mk
-include mk/termbox2.mk
 include mk/yajl.mk
 include mk/help.mk
 include mk/clean.mk
