@@ -1,0 +1,67 @@
+#!/bin/bash
+# A simple wrapper to fixup path issues and start ft8goblin without installing...
+#
+# Pass -g if you want to open things in gdb
+#
+
+# If -g option is passed, use GDB to help debug things
+if [ "$1" == "-g" ]; then
+   use_gdb=y
+fi
+
+# Clear old log files
+rm -f logs/callsign-lookupd.log
+
+#########
+# Add ./lib to the library search path
+export LD_LIBRARY_PATH=./lib:${LD_LIBRARY_PATH}
+
+# Some logging stuff
+####################
+# redirect gcc sanitizer outputs to files
+export ASAN_OPTIONS="log_path=logs/asan.log"
+export UBSAN_OPTIONS="log_path=logs/ubsan.log"
+
+# rebuild things or exit if failure
+if [ ! -f bin/callsign-lookupd ]; then
+   echo "Hang on, we need to compile things... This should only take a moment."
+   make clean || exit 2
+   make -j${NPROC} world || exit 1
+fi
+
+# Does calldata cache db exist?
+if [ ! -f "etc/calldata-cache.db" ]; then
+   echo "* Initializing etc/calldata-cache.db"
+   sqlite3 etc/calldata-cache.db < sql/cache.sql 
+fi
+
+# Does FCC ULS database exist?
+if [ ! -f "etc/fcc-uls.db" ]; then
+   # Does the FCC data exist?
+   # XXX: Check if it's over a week old and if so, update it, if possible
+   if [ ! -f "data-sources/fcc-uls/fcc_uls_amateur/EN.dat" ]; then
+      # Can we ping the server?
+      ping -c 3 data.fcc.gov
+      if [ $? -ne 0 ]; then
+         echo "* Can't reach data.fcc.gov, skipping download and build of fcc uls"
+      else
+         echo "* Fetching FCC ULS data"
+         ./data-sources/fcc-uls/fetch.sh
+      fi
+   fi
+   if [ -f "data-sources/fcc-uls/fcc_uls_amateur/EN.dat" ]; then
+     echo "* Importing FCC ULS database, this will take a few minutes"
+     ./scripts/uls2db.pl
+   else
+      echo "**********************"
+      echo "* Looks like the download or unpacking of the FCC ULS data failed. I can't find EN.dat!"
+      exit 1
+   fi
+fi
+
+if [ "${use_gdb}" == "y" ]; then
+   gdb -e .gdbscript ./bin/callsign-lookupd $@
+else
+   ./bin/callsign-lookupd $@
+fi
+last_exit=$?
