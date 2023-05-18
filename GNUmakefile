@@ -67,6 +67,7 @@ sigcapd_real_objs := $(foreach x,${sigcapd_objs} ${common_objs},obj/${x})
 callsign_lookupd_real_objs := $(foreach x,${callsign_lookupd_objs} ${common_objs},obj/${x})
 flac_streamerd_real_objs := $(foreach x,${flac_streamerd_objs} ${common_objs},obj/${x})
 
+extra_build_targets += etc/calldata-cache.db
 real_bins := $(foreach x,${bins},bin/${x})
 extra_clean += ${ft8goblin_real_objs} ${ft8decoder_real_objs} ${ft8encoder_real_objs} ${sigcapd_real_objs} ${callsign_lookupd_real_objs} ${flac_streamerd_real_objs}
 extra_clean += ${real_bins} ${ft8lib} ${ft8lib_objs}
@@ -104,6 +105,10 @@ bin/flac-streamerd: ${flac_streamerd_real_objs}
 obj/sigcapd.o: src/sigcapd.cc
 	@echo "[CXX] $^ -> $@"
 	@${CXX} ${CXXFLAGS} ${sigcapd_cflags} -o $@ -c $<
+
+##########
+etc/calldata-cache.db:
+	sqlite3 etc/calldata-cache.db < sql/cache.sql 
 
 ####################################################################
 # ugly hacks to quiet the compiler until we can clean things up... #

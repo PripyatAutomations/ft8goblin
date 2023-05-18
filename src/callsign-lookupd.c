@@ -11,12 +11,6 @@
 //
 // We then need to save it to the cache (if it didn't come from there already)
 #include "config.h"
-#include "qrz-xml.h"
-#include "debuglog.h"
-#include "ft8goblin_types.h"
-#include "gnis-lookup.h"
-#include "fcc-db.h"
-#include "qrz-xml.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -24,12 +18,45 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <ev.h>
-static bool callsign_use_uls = false, callsign_use_qrz = false, callsign_initialized = false;
+#include "debuglog.h"
+#include "qrz-xml.h"
+#include "ft8goblin_types.h"
+#include "gnis-lookup.h"
+#include "fcc-db.h"
+#include "qrz-xml.h"
+#include "sql.h"
+
+
+#define BUFFER_SIZE 1024
+typedef struct {
+    char buffer[BUFFER_SIZE];
+    size_t length;
+} InputBuffer;
+
+
+static bool callsign_use_uls = false, callsign_use_qrz = false, callsign_initialized = false, callsign_use_cache = false;
+static const char *callsign_cache_db = NULL;
+static time_t callsign_cache_expiry = -1;
+static bool callsign_keep_stale_offline = false;
+static Database *calldata_cache = NULL, *calldata_uls = NULL;
 
 // common shared things for our library
 const char *progname = "callsign-lookupd";
 bool dying = 0;
 time_t now = -1;
+
+time_t timestr2time_t(const char *str) {
+   time_t ret = 86400;
+   return ret;
+}
+
+bool str2bool(const char *str, bool def) {
+   if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0) {
+      return true;
+   }
+
+   return def;
+}
 
 // Load the configuration (cfg_get_str(...)) into *our* configuration locals
 static void callsign_lookup_setup(void) {
@@ -51,6 +78,26 @@ static void callsign_lookup_setup(void) {
       callsign_use_qrz = true;
    } else {
       callsign_use_qrz = false;
+   }
+
+
+   s = cfg_get_str(cfg, "callsign-lookup/cache-db");
+   if (s == NULL) {
+      log_send(mainlog, LOG_CRIT, "callsign_lookup_setup: Failed to find cache-db in config! Disabling cache...");
+   } else {
+      callsign_cache_db = s;
+      callsign_cache_expiry = timestr2time_t(cfg_get_str(cfg, "callsign-lookup/cache-expiry"));
+      callsign_keep_stale_offline = str2bool(cfg_get_str(cfg, "callsign-lookup/cache-keep-stale-if-offline"), false);
+
+      if ((calldata_cache = sql_open(callsign_cache_db)) == NULL) {
+         log_send(mainlog, LOG_CRIT, "callsign_lookup_setup: failed opening cache %s! Disabling caching!", callsign_cache_db);
+         callsign_use_cache = false;
+      } else {
+         // cache database was succesfully opened
+         // XXX: Detect if we need to initialize it -- does table cache exist?
+         // XXX: Initialize the tables using sql in sql/cache.sql
+         callsign_use_cache = true;
+      }
    }
 }
    
@@ -137,7 +184,7 @@ bool calldata_dump(calldata_t *calldata, const char *callsign) {
    }
 
    if (calldata->first_name[0] != '\0') {
-      fprintf(stdout, "Name: %s %c%s%s\n", calldata->first_name, calldata->mi, (calldata->mi != '\0' ? " " : ""), calldata->last_name);
+      fprintf(stdout, "Name: %s %s\n", calldata->first_name, calldata->last_name);
    }
 
    if (calldata->alias_count > 0 && (calldata->aliases[0] != '\0')) {
@@ -189,10 +236,47 @@ bool calldata_dump(calldata_t *calldata, const char *callsign) {
    }
 
    if (calldata->license_effective > 0) {
-      fprintf(stdout, "License Effective: %lu\n", calldata->license_effective);
+      struct tm *eff_tm = localtime(&calldata->license_effective);
+
+      if (eff_tm == NULL) {
+         log_send(mainlog, LOG_DEBUG, "calldata_dump: failed converting license_effective to tm");
+      } else {
+         char eff_buf[129];
+         memset(eff_buf, 0, 129);
+
+         size_t eff_ret = -1;
+         if ((eff_ret = strftime(eff_buf, 128, "%Y/%m/%d", eff_tm)) == 0) {
+            if (errno != 0) {
+               log_send(mainlog, LOG_DEBUG, "calldata_dump: strfime license effective failed: %d: %s", errno, strerror(errno));
+            }
+         } else {
+            fprintf(stdout, "License Effective: %s\n", eff_buf);
+         }
+      }
+   } else {
+      fprintf(stdout, "License Effective: UNKNOWN\n");
    }
+
    if (calldata->license_expiry > 0) {
-      fprintf(stdout, "License Expires: %lu\n", calldata->license_expiry);
+      struct tm *exp_tm = localtime(&calldata->license_expiry);
+
+      if (exp_tm == NULL) {
+         log_send(mainlog, LOG_DEBUG, "calldata_dump: failed converting license_expiry to tm");
+      } else {
+         char exp_buf[129];
+         memset(exp_buf, 0, 129);
+
+         size_t ret = -1;
+         if ((ret = strftime(exp_buf, 128, "%Y/%m/%d", exp_tm)) == 0) {
+            if (errno != 0) {
+               log_send(mainlog, LOG_DEBUG, "calldata_dump: strfime license expiry failed: %d: %s", errno, strerror(errno));
+            }
+         } else {
+            fprintf(stdout, "License Expires: %s\n", exp_buf);
+         }
+      }
+   } else {
+      fprintf(stdout, "License Expires: UNKNOWN\n");
    }
 
    if (calldata->country[0] != '\0') {
@@ -202,8 +286,76 @@ bool calldata_dump(calldata_t *calldata, const char *callsign) {
    return true;
 }
 
+// XXX: Create a socket IO type to pass around here
+typedef struct sockio {
+  char readbuf[16384];
+  char writebuf[32768];
+} sockio_t;
+
+static bool parse_request(const char *line) {
+//   fprintf(stderr, "stdin_cb: Parsing line: %s\n", line);
+   // XXX: Here we need to parse commands from stdin
+   if (strncasecmp(line, "LOOKUP ", 7) == 0) {
+      const char *callsign = line + 7;
+
+      calldata_t *calldata = callsign_lookup(callsign);
+
+      if (calldata == NULL) {
+         fprintf(stdout, "404 NOT FOUND %lu %s\n", now, callsign);
+         log_send(mainlog, LOG_NOTICE, "Callsign %s was not found in enabled databases.", callsign);
+         // give error status for scripts
+         exit(1);
+      } else {
+         // Send the result
+         calldata_dump(calldata, callsign);
+      }
+      free(calldata);
+      calldata = NULL;
+   } else {
+      fprintf(stderr, "500 Your client sent a request I do not understand... Try again!\n");
+      // XXX: we should keep track of invalid requests and eventually punt the client...
+   }
+   
+   return false;
+}
+
 static void stdio_cb(EV_P_ ev_io *w, int revents) {
-   // 
+    if (EV_ERROR & revents) {
+        fprintf(stderr, "Error event in stdin watcher\n");
+        return;
+    }
+
+    InputBuffer *input = (InputBuffer *)w->data;
+    ssize_t bytesRead = read(STDIN_FILENO, input->buffer + input->length, BUFFER_SIZE - input->length);
+
+    if (bytesRead < 0) {
+        perror("read");
+        return;
+    }
+
+    if (bytesRead == 0) {
+        // End of file (Ctrl+D pressed)
+        ev_io_stop(EV_A, w);
+        free(input);
+        return;
+    }
+
+    input->length += bytesRead;
+
+    // Process complete lines
+    char *newline;
+    while ((newline = strchr(input->buffer, '\n')) != NULL) {
+        *newline = '\0';  // Replace newline character with null terminator
+        parse_request(input->buffer);
+        memmove(input->buffer, newline + 1, input->length - (newline - input->buffer));
+        input->length -= (newline - input->buffer) + 1;
+    }
+
+    // If buffer is full and no newline is found, consider it an incomplete line
+    if (input->length == BUFFER_SIZE) {
+        fprintf(stderr, "Input buffer full, discarding incomplete line: %s\n", input->buffer);
+        input->length = 0;  // Discard the incomplete line
+    }
 }
 
 static void periodic_cb(EV_P_ ev_timer *w, int revents) {
@@ -213,9 +365,10 @@ static void periodic_cb(EV_P_ ev_timer *w, int revents) {
 
 int main(int argc, char **argv) {
    struct ev_loop *loop = EV_DEFAULT;
-   struct ev_io io_watcher;
+   struct ev_io stdin_watcher;
    struct ev_timer periodic_watcher;
    bool res = false;
+   InputBuffer *input = NULL;
 
    now = time(NULL);
 
@@ -233,8 +386,15 @@ int main(int argc, char **argv) {
    }
    log_send(mainlog, LOG_NOTICE, "%s/%s starting up!", progname, VERSION);
 
-   ev_io_init(&io_watcher, stdio_cb, STDIN_FILENO, EV_READ);
-   ev_io_start(loop, &io_watcher);
+   if ((input = malloc(sizeof(InputBuffer))) == NULL) {
+      log_send(mainlog, LOG_CRIT, "malloc(InputBuffer): out of memory!");
+      exit(ENOMEM);
+   }
+   memset(input, 0, sizeof(InputBuffer));
+
+   ev_io_init(&stdin_watcher, stdio_cb, STDIN_FILENO, EV_READ);
+   stdin_watcher.data = input;
+   ev_io_start(loop, &stdin_watcher);
 
    // start our once a second periodic timer (used for housekeeping and the clock display)
    ev_timer_init(&periodic_watcher, periodic_cb, 0, 1);
@@ -282,5 +442,21 @@ int main(int argc, char **argv) {
       dying = true;
    }
 
+   // Close the database(s)
+   if (calldata_cache != NULL) {
+      sql_close(calldata_cache);
+      calldata_cache = NULL;
+   }
+
+   if (calldata_uls != NULL) {
+      sql_close(calldata_uls);
+      calldata_uls = NULL;
+   }
+
+   //
+   if (input != NULL) {
+      free(input);
+      input = NULL;
+   }
    return 0;
 }

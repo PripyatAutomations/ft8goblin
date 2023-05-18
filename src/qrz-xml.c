@@ -18,7 +18,7 @@
 #include <curl/curl.h>
 #include <sys/param.h>
 #include <string.h>
-
+#include <time.h>
 extern char *progname;
 static const char *qrz_user = NULL, *qrz_pass = NULL, *qrz_api_key = NULL, *qrz_api_url;
 static qrz_session_t *qrz_session = NULL;
@@ -347,7 +347,7 @@ bool qrz_parse_http_data(const char *buf, calldata_t *calldata) {
          }
          char *u_views = strstr(buf, "<u_views>");
          if (u_views != NULL) {
-            u_views += 7;
+            u_views += 9;
             char *u_views_end = strstr(u_views, "</u_views>");
             size_t u_views_len = (u_views_end - u_views);
             char u_views_buf[u_views_len + 1];
@@ -355,8 +355,47 @@ bool qrz_parse_http_data(const char *buf, calldata_t *calldata) {
             memcpy(u_views_buf, u_views, u_views_len);
          }
 
-//<efdate>2021-07-17</efdate>
-//<expdate>2031-07-17</expdate>
+         char *efdate = strstr(buf, "<efdate>");
+         if (efdate != NULL) {
+            efdate += 8;
+            char *efdate_end = strstr(efdate, "</efdate>");
+            size_t efdate_len = (efdate_end - efdate);
+            char efdate_buf[efdate_len + 1];
+            struct tm tm;
+            time_t eftime = -1;
+            memset(efdate_buf, 0, efdate_len + 1);
+            memcpy(efdate_buf, efdate, efdate_len);
+
+            log_send(mainlog, LOG_INFO, "efdate: %p, efdate_end: %p, efdate_len: %lu, efdate_buf: %s", efdate, efdate_end, efdate_len, efdate_buf);
+
+            memset(&tm, 0, sizeof(struct tm));
+            if ((strptime(efdate_buf, "%Y-%m-%d", &tm)) == NULL) {
+               log_send(mainlog, LOG_WARNING, "parsing efdate from qrz failed: %d: %s", errno, strerror(errno));
+            } else {
+               eftime = mktime(&tm);
+               log_send(mainlog, LOG_INFO, "eftime: %lu now: %lu", eftime, now);
+               calldata->license_effective = eftime;
+            }
+         }
+         char *expdate = strstr(buf, "<expdate>");
+         if (expdate != NULL) {
+            expdate += 9;
+            char *expdate_end = strstr(expdate, "</expdate>");
+            size_t expdate_len = (expdate_end - expdate);
+            char expdate_buf[expdate_len + 1];
+            struct tm exptm;
+            time_t exptime = -1;
+            memset(expdate_buf, 0, expdate_len + 1);
+            memcpy(expdate_buf, expdate, expdate_len);
+
+            memset(&exptm, 0, sizeof(struct tm));
+            if ((strptime(expdate_buf, "%Y-%m-%d", &exptm)) == NULL) {
+               log_send(mainlog, LOG_WARNING, "parsing expdate from qrz failed: %d: %s", errno, strerror(errno));
+            } else {
+               exptime = mktime(&exptm);
+               calldata->license_expiry = exptime;
+            }
+         }
 
          return true;
       }

@@ -41,6 +41,29 @@ static void subproc_cb(EV_P_ ev_child *w, int revents) {
 
    // log the event
    log_send(mainlog, LOG_CRIT, "subproc: process %d exited with status %x\n", w->rpid, w->rstatus);
+
+   // Find subproc in children[] that matches
+   int i;
+   subproc_t *p = NULL;
+
+   for (i = 0; i < MAX_SUBPROC; i++) {
+      // End of list, don't waste time continuing...
+      // XXX: Is this right or might we zero slots and leave gaps in the array?
+      // XXX: We should consider this and modify appropriately... 20230517
+      if (children[i] == NULL) {
+         break;
+      }
+
+      // is this our match?
+      if (children[i]->pid == w->rpid) {
+         p = children[i];
+         break;
+      }
+   }
+
+   // This setting will cause the periodic timer to restart the process soon...
+   p->restart_time = 0;
+   p->needs_restarted = true;
 }
 
 bool subproc_start(int slot) {

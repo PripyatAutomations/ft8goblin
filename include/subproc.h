@@ -26,6 +26,7 @@ extern "C" {
    extern void subproc_shutdown_all(void);
    extern int subproc_check_all(void);
    extern int subproc_respawn_corpses(void);
+
 #ifdef __cplusplus
 };
 #endif

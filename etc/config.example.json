@@ -3,7 +3,7 @@
    "ipc": {
       "udp-port-base": 12000,
       "udp-packet-size": 1472,
-      "path": "log/ft8goblin.pipe",
+      "path": "run/ft8goblin.pipe",
       "mode": "0660"
    },
    "logging": {
@@ -44,7 +44,7 @@
       "qrz-api-key": "xxxx",
       "qrz-username": "xxxx",
       "qrz-password": "xxxx",
-      "cache-db": "etc/callsign-cache.db",
+      "cache-db": "etc/calldata-cache.db",
       "cache-online-lookups": "true",
       "cache-expiry": "3d",
       "cache-keep-stale-if-offline": "true",

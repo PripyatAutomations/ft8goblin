@@ -1,0 +1,23 @@
+create table cache (
+   cache_id INTEGER PRIMARY KEY AUTOINCREMENT,
+   callsign VARCHAR(24),
+   dxcc TEXT,
+   aliases TEXT,
+   first_name TEXT,
+   last_name TEXT,
+   addr1 TEXT,
+   addr2 TEXT,
+   state TEXT,
+   zip TEXT,
+   grid TEXT,
+   country TEXT,
+   latitude FLOAT,
+   longitude FLOAT,
+   county TEXT,
+   class TEXT,
+   codes TEXT,
+   email TEXT,
+   u_views INT,
+   effective DATE,
+   expires DATE
+);

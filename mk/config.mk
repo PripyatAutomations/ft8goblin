@@ -11,11 +11,11 @@ lib_install_path := ${PREFIX}/lib
 
 # required libraries: -l${x} will be expanded later...
 common_libs += yajl ev
-ft8goblin_libs += ncurses termbox2 hamlib m
+ft8goblin_libs += ncurses termbox2 hamlib m sqlite3
 ft8coder_libs += m
 flac_streamerd_libs +=
 sigcapd_libs += uhd rtlsdr uhd rtlsdr hamlib
-callsign_lookupd_libs := m curl
+callsign_lookupd_libs := m curl sqlite3
 
 ERROR_FLAGS := -Werror 
 SAN_FLAGS := -fsanitize=address
@@ -30,12 +30,8 @@ CXXFLAGS := ${CXX_STD} $(filter-out ${C_STD},${CFLAGS})
 LDFLAGS += -L./lib/ ${SAN_FLAGS}
 LDFLAGS += $(foreach x,${common_libs},-l${x})
 ft8lib_cflags := -fPIC
-ft8goblin_ldflags := ${LDFLAGS} $(foreach x,${ft8goblin_libs},-l${x})
-ft8coder_ldflags := ${LDFLAGS} $(foreach x,${ft8coder_libs},-l${x})
-ft8coder_ldflags += -lft8
-sigcapd_ldflags := ${LDFLAGS} $(foreach x,${sigcapd_libs},-l${x})
-flac_streamerd_ldflags := ${LDFLAGS} $(foreach x,${flac_streamerd_libs},-l${x})
-callsign_lookupd_ldflags := ${LDFLAGS} $(foreach x,${callsign_lookupd_libs},-l${x})
+
+
 # Adjust for build-time options
 ifeq (${ALSA},y)
 libs += asound
@@ -49,5 +45,13 @@ endif
 
 ifeq (${POSTGRESQL},y)
 ft8goblin_libs += pq
+callsign_lookupd_libs += pq
 CFLAGS += -DUSE_POSTGRESQL
 endif
+
+ft8goblin_ldflags := ${LDFLAGS} $(foreach x,${ft8goblin_libs},-l${x})
+ft8coder_ldflags := ${LDFLAGS} $(foreach x,${ft8coder_libs},-l${x})
+ft8coder_ldflags += -lft8
+sigcapd_ldflags := ${LDFLAGS} $(foreach x,${sigcapd_libs},-l${x})
+flac_streamerd_ldflags := ${LDFLAGS} $(foreach x,${flac_streamerd_libs},-l${x})
+callsign_lookupd_ldflags := ${LDFLAGS} $(foreach x,${callsign_lookupd_libs},-l${x})
