@@ -10,7 +10,7 @@ if [ "$1" == "-g" ]; then
 fi
 
 # Clear old log files
-rm -f logs/callsign-lookupd.log
+rm -f logs/callsign-lookupd.log logs/?san.log.*
 
 #########
 # Add ./lib to the library search path

@@ -180,7 +180,8 @@ bool callsign_cache_save(calldata_t *cp) {
          "state, zip, grid, country, latitude, longitude, county, class,"
          "codes, email, u_views, effective, expires, cache_expires,"
          "cache_fetched) VALUES"
-         "( @CALL, @DXCC, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+         "( UPPER(@CALL), @DXCC, @ALIAS, @FNAME, @LNAME, @ADDRA, @ADDRB, "
+         "@STATE, @ZIP, @GRID, @COUNTRY, @LAT, @LAT, @COUNTY, @CLASS, @CODE, @EMAIL, @VIEWS, @EFF, @EXP, @CEXP, @CFETCH);";
 
       rc = sqlite3_prepare_v2(calldata_cache->hndl.sqlite3, sql , -1, &cache_insert_stmt, 0);
 
@@ -194,28 +195,51 @@ bool callsign_cache_save(calldata_t *cp) {
    }
 
    // bind variables
-   sqlite3_bind_text(cache_insert_stmt, sqlite3_bind_parameter_index(cache_insert_stmt, "@CALL"), cp->callsign, -1, SQLITE_TRANSIENT);
-   sqlite3_bind_int(cache_insert_stmt, sqlite3_bind_parameter_index(cache_insert_stmt, "@DXCC"), cp->dxcc);
-   sqlite3_bind_text(cache_insert_stmt,    3, cp->aliases, -1, SQLITE_TRANSIENT);
-   sqlite3_bind_text(cache_insert_stmt,    4, cp->first_name, -1, SQLITE_TRANSIENT);
-   sqlite3_bind_text(cache_insert_stmt,    5, cp->last_name, -1, SQLITE_TRANSIENT);
-   sqlite3_bind_text(cache_insert_stmt,    6, cp->address1, -1, SQLITE_TRANSIENT);
-   sqlite3_bind_text(cache_insert_stmt,    7, cp->address2, -1, SQLITE_TRANSIENT); 
-   sqlite3_bind_text(cache_insert_stmt,    8, cp->state, -1, SQLITE_TRANSIENT);
-   sqlite3_bind_text(cache_insert_stmt,    9, cp->zip, -1, SQLITE_TRANSIENT);
-   sqlite3_bind_text(cache_insert_stmt,   10, cp->grid, -1, SQLITE_TRANSIENT);
-   sqlite3_bind_text(cache_insert_stmt,   11, cp->country, -1, SQLITE_TRANSIENT);
-   sqlite3_bind_double(cache_insert_stmt, 12, cp->latitude);
-   sqlite3_bind_double(cache_insert_stmt, 13, cp->longitude);
-   sqlite3_bind_text(cache_insert_stmt,   14, cp->county, -1, SQLITE_TRANSIENT);
-   sqlite3_bind_text(cache_insert_stmt,   15, cp->opclass, -1, SQLITE_TRANSIENT);
-   sqlite3_bind_text(cache_insert_stmt,   16, cp->codes, -1, SQLITE_TRANSIENT);
-   sqlite3_bind_text(cache_insert_stmt,   17, cp->email, -1, SQLITE_TRANSIENT);
-   sqlite3_bind_int(cache_insert_stmt,    18, cp->qrz_views);
-   sqlite3_bind_int64(cache_insert_stmt,  19, cp->license_effective);
-   sqlite3_bind_int64(cache_insert_stmt,  20, cp->license_expiry);
-   sqlite3_bind_int64(cache_insert_stmt,  21, now + callsign_cache_expiry);
-   sqlite3_bind_int64(cache_insert_stmt,  22, now);
+   int idx_callsign = sqlite3_bind_parameter_index(cache_insert_stmt, "@CALL");
+   int idx_dxcc = sqlite3_bind_parameter_index(cache_insert_stmt, "@DXCC");
+   int idx_aliases = sqlite3_bind_parameter_index(cache_insert_stmt, "@ALIAS");
+   int idx_fname = sqlite3_bind_parameter_index(cache_insert_stmt, "@FNAME");
+   int idx_lname = sqlite3_bind_parameter_index(cache_insert_stmt, "@LNAME");
+   int idx_addr1 = sqlite3_bind_parameter_index(cache_insert_stmt, "@ADDRA");
+   int idx_addr2 = sqlite3_bind_parameter_index(cache_insert_stmt, "@ADDRB");
+   int idx_state = sqlite3_bind_parameter_index(cache_insert_stmt, "@STATE");
+   int idx_zip = sqlite3_bind_parameter_index(cache_insert_stmt, "@ZIP");
+   int idx_grid = sqlite3_bind_parameter_index(cache_insert_stmt, "@GRID");
+   int idx_country = sqlite3_bind_parameter_index(cache_insert_stmt, "@COUNTRY");
+   int idx_latitude = sqlite3_bind_parameter_index(cache_insert_stmt, "@LAT");
+   int idx_longitude = sqlite3_bind_parameter_index(cache_insert_stmt, "@LON");
+   int idx_county = sqlite3_bind_parameter_index(cache_insert_stmt, "@COUNTY");
+   int idx_class = sqlite3_bind_parameter_index(cache_insert_stmt, "@CLASS");
+   int idx_codes = sqlite3_bind_parameter_index(cache_insert_stmt, "@CODES");
+   int idx_email = sqlite3_bind_parameter_index(cache_insert_stmt, "@EMAIL");
+   int idx_views = sqlite3_bind_parameter_index(cache_insert_stmt, "@VIEWS");
+   int idx_eff = sqlite3_bind_parameter_index(cache_insert_stmt, "@EFF");
+   int idx_exp = sqlite3_bind_parameter_index(cache_insert_stmt, "@EXP");
+   int idx_cache_expiry = sqlite3_bind_parameter_index(cache_insert_stmt, "@CEXP");
+   int idx_cache_fetched = sqlite3_bind_parameter_index(cache_insert_stmt, "@CFETCH");
+
+   sqlite3_bind_text(cache_insert_stmt, idx_callsign, cp->callsign, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_int(cache_insert_stmt, idx_dxcc, cp->dxcc);
+   sqlite3_bind_text(cache_insert_stmt, idx_aliases, cp->aliases, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt, idx_fname, cp->first_name, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt, idx_lname, cp->last_name, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt, idx_addr1, cp->address1, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt, idx_addr2, cp->address2, -1, SQLITE_TRANSIENT); 
+   sqlite3_bind_text(cache_insert_stmt, idx_state, cp->state, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt, idx_zip, cp->zip, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt, idx_grid, cp->grid, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt, idx_country, cp->country, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_double(cache_insert_stmt, idx_latitude, cp->latitude);
+   sqlite3_bind_double(cache_insert_stmt, idx_longitude, cp->longitude);
+   sqlite3_bind_text(cache_insert_stmt, idx_county, cp->county, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt, idx_class, cp->opclass, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt, idx_codes, cp->codes, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_text(cache_insert_stmt, idx_email, cp->email, -1, SQLITE_TRANSIENT);
+   sqlite3_bind_int(cache_insert_stmt, idx_views, cp->qrz_views);
+   sqlite3_bind_int64(cache_insert_stmt, idx_eff, cp->license_effective);
+   sqlite3_bind_int64(cache_insert_stmt, idx_exp, cp->license_expiry);
+   sqlite3_bind_int64(cache_insert_stmt, idx_cache_expiry, now + callsign_cache_expiry);
+   sqlite3_bind_int64(cache_insert_stmt, idx_cache_fetched, now);
 
    // execute the query
    rc = sqlite3_step(cache_insert_stmt);
@@ -234,6 +258,11 @@ bool callsign_cache_save(calldata_t *cp) {
 calldata_t *callsign_cache_find(const char *callsign) {
    calldata_t *cd = NULL;
    int rc = -1;
+   int idx_callsign = 0, idx_dxcc = 0, idx_aliases = 0, idx_fname = 0, idx_lname = 0, idx_addr1 = 0;
+   int idx_addr2 = 0, idx_state = 0, idx_zip = 0, idx_grid = 0, idx_country = 0, idx_latitude = 0;
+   int idx_longitude = 0, idx_county = 0, idx_class = 0, idx_codes = 0, idx_email = 0, idx_views = 0;
+   int idx_effective = 0, idx_expiry = 0, idx_cache_expiry = 0, idx_cache_fetched = 0;
+
 
    // if no callsign given, bail
    if (callsign == NULL) {
@@ -246,22 +275,23 @@ calldata_t *callsign_cache_find(const char *callsign) {
       fprintf(stderr, "callsign_cache_find: out of memory!\n");
       exit(ENOMEM);
    }
+   memset(cd, 0, sizeof(calldata_t));
 
    // prepare the statement if it's not been done yet
    if (cache_select_stmt == NULL) {
 //      char *sql = "SELECT callsign, dxcc, aliases, first_name, last_name, addr1, addr2, state, zip, grid, country, latitude, longitude, county, class, codes, email, u_views, effective, expires, cache_expires, cache_fetched FROM cache WHERE callsign = ?;";
-      char *sql = "SELECT * FROM cache WHERE callsign = @CALL;";
+      char *sql = "SELECT * FROM cache WHERE callsign = UPPER(@CALL);";
       log_send(mainlog, LOG_DEBUG, "sql query: %s", sql);
       rc = sqlite3_prepare(calldata_cache->hndl.sqlite3, sql, -1, &cache_select_stmt, 0);
 
       if (rc == SQLITE_OK) {
-         rc = sqlite3_bind_text(cache_select_stmt, sqlite3_bind_parameter_index(cache_select_stmt, "@CALL"), callsign, -1, SQLITE_TRANSIENT);
-         if (rc != SQLITE_OK) {
+         rc = sqlite3_bind_text(cache_select_stmt, 1, callsign, -1, SQLITE_TRANSIENT);
+         if (rc == SQLITE_OK) {
+            log_send(mainlog, LOG_DEBUG, "prepared cache SELECT statement succesfully");
+         } else {
             log_send(mainlog, LOG_WARNING, "sqlite3_bind_text cache select callsign failed: %s", sqlite3_errmsg(calldata_cache->hndl.sqlite3));
             free(cd);
             return NULL;
-         } else {
-            log_send(mainlog, LOG_DEBUG, "prepared cache SELECT statement succesfully");
          }
       } else {
          log_send(mainlog, LOG_WARNING, "Error preparing statement for cache select of record for %s: %s\n", callsign, sqlite3_errmsg(calldata_cache->hndl.sqlite3));
@@ -282,13 +312,91 @@ calldata_t *callsign_cache_find(const char *callsign) {
    }
 
    int step = sqlite3_step(cache_select_stmt);
-    
    if (step == SQLITE_ROW) {
-      // XXX: Process the row, should only be one...
       log_send(mainlog, LOG_DEBUG, "got row");
+
+      // Find column names, so we can avoid trying to refer to them by number
+      int cols = sqlite3_column_count(cache_select_stmt);
+      log_send(mainlog, LOG_DEBUG, "cols: %d\n", cols);
+
+      for (int i = 0; i < cols; i++) {
+          const char *cname = sqlite3_column_name(cache_select_stmt, i);
+          log_send(mainlog, LOG_DEBUG, "%d: %s\n", cols, cname);
+
+          if (strcasecmp(cname, "callsign") == 0) {
+             idx_callsign = i;
+          } else if (strcasecmp(cname, "dxcc") == 0) {
+             idx_dxcc = i;
+          } else if (strcasecmp(cname, "aliases") == 0) {
+             idx_aliases = i;
+          } else if (strcasecmp(cname, "first_name") == 0) {
+             idx_fname = i;
+          } else if (strcasecmp(cname, "last_name") == 0) {
+             idx_lname = i;
+          } else if (strcasecmp(cname, "addr1") == 0) {
+             idx_addr1 = i;
+          } else if (strcasecmp(cname, "addr2") == 0) {
+             idx_addr2 = i;
+          } else if (strcasecmp(cname, "state") == 0) {
+             idx_state = i;
+          } else if (strcasecmp(cname, "zip") == 0) {
+             idx_zip = i;
+          } else if (strcasecmp(cname, "grid") == 0) {
+             idx_grid = i;
+          } else if (strcasecmp(cname, "country") == 0) {
+             idx_country = i;
+          } else if (strcasecmp(cname, "latitude") == 0) {
+             idx_latitude = i;
+          } else if (strcasecmp(cname, "longitude") == 0) {
+             idx_longitude = i;
+          } else if (strcasecmp(cname, "countr") == 0) {
+             idx_county = i;
+          } else if (strcasecmp(cname, "class") == 0) {
+             idx_class = i;
+          } else if (strcasecmp(cname, "codes") == 0) {
+             idx_codes = i;
+          } else if (strcasecmp(cname, "email") == 0) {
+             idx_email = i;
+          } else if (strcasecmp(cname, "u_views") == 0) {
+             idx_views = i;
+          } else if (strcasecmp(cname, "effective") == 0) {
+             idx_effective = i;
+          } else if (strcasecmp(cname, "expires") == 0) {
+             idx_expiry = i;
+          } else if (strcasecmp(cname, "cache_expires") == 0) {
+             idx_cache_expiry = i;
+          } else if (strcasecmp(cname, "cache_fetched") == 0) {
+             idx_cache_fetched = i;
+          }
+      }
+
+      // Copy the data into the calldata_t
+      cd->origin = DATASRC_CACHE;
+      cd->cached = true;
+      snprintf(cd->callsign, MAX_CALLSIGN, "%s", sqlite3_column_text(cache_select_stmt, idx_callsign));
+      snprintf(cd->aliases, MAX_QRZ_ALIASES, "%s", sqlite3_column_text(cache_select_stmt, idx_aliases));
+      snprintf(cd->first_name, MAX_FIRSTNAME, "%s", sqlite3_column_text(cache_select_stmt, idx_fname));
+      snprintf(cd->last_name, MAX_LASTNAME, "%s", sqlite3_column_text(cache_select_stmt, idx_lname));
+      snprintf(cd->address1, MAX_ADDRESS_LEN, "%s", sqlite3_column_text(cache_select_stmt, idx_addr1));
+      snprintf(cd->address2, MAX_ADDRESS_LEN, "%s", sqlite3_column_text(cache_select_stmt, idx_addr2));
+      snprintf(cd->state, 3, "%s", sqlite3_column_text(cache_select_stmt, idx_state));
+      snprintf(cd->zip, MAX_ZIP_LEN, "%s", sqlite3_column_text(cache_select_stmt, idx_zip));
+      snprintf(cd->grid, MAX_GRID_LEN, "%s", sqlite3_column_text(cache_select_stmt, idx_grid));
+      snprintf(cd->country, MAX_COUNTRY_LEN, "%s", sqlite3_column_text(cache_select_stmt, idx_country));
+      cd->latitude = sqlite3_column_double(cache_select_stmt, idx_latitude);
+      cd->longitude = sqlite3_column_double(cache_select_stmt, idx_longitude);
+      snprintf(cd->county, MAX_COUNTY, "%s", sqlite3_column_text(cache_select_stmt, idx_county));
+      snprintf(cd->opclass, MAX_CLASS_LEN, "%s", sqlite3_column_text(cache_select_stmt, idx_class));
+      snprintf(cd->codes, MAX_CLASS_LEN, "%s", sqlite3_column_text(cache_select_stmt, idx_codes));
+      snprintf(cd->email, MAX_EMAIL, "%s", sqlite3_column_text(cache_select_stmt, idx_email));
+      cd->qrz_views = sqlite3_column_int64(cache_select_stmt, idx_views);
+      cd->dxcc = sqlite3_column_int64(cache_select_stmt, idx_dxcc);
+      cd->license_effective = sqlite3_column_int64(cache_select_stmt, idx_effective);
+      cd->license_expiry = sqlite3_column_int64(cache_select_stmt, idx_expiry);
+      cd->cache_expiry = sqlite3_column_int64(cache_select_stmt, idx_cache_expiry);
+      cd->cache_fetched = sqlite3_column_int64(cache_select_stmt, idx_cache_fetched);
    } else {
-      //
-      log_send(mainlog, LOG_DEBUG, "no rows");
+      log_send(mainlog, LOG_DEBUG, "no rows - step: %d", step);
       free(cd);
       return NULL;
    }
@@ -313,16 +421,14 @@ calldata_t *callsign_lookup(const char *callsign) {
 
    // nope, check QRZ XML API, if the user has an account
    if (callsign_use_qrz && qr == NULL) {
-      qr = qrz_lookup_callsign(callsign);
-      if (qr != NULL) {
+      if ((qr = qrz_lookup_callsign(callsign)) != NULL) {
          log_send(mainlog, LOG_DEBUG, "got qrz calldata for %s", callsign);
       }
    }
 
    // nope, check FCC ULS next since it's available offline
    if (callsign_use_uls && qr == NULL) {
-      qr = uls_lookup_callsign(callsign);
-      if (qr != NULL) {
+      if ((qr = uls_lookup_callsign(callsign)) != NULL) {
          log_send(mainlog, LOG_DEBUG, "got uls calldata for %s", callsign);
       }
    }
@@ -337,7 +443,6 @@ calldata_t *callsign_lookup(const char *callsign) {
    if (!from_cache) {
       log_send(mainlog, LOG_DEBUG, "adding new item (%s) to cache", callsign);
       callsign_cache_save(qr);
-      return qr;
    }
 
    // increment total requests counter
@@ -353,13 +458,15 @@ calldata_t *callsign_lookup(const char *callsign) {
          fini();
       }
    }
-   return NULL;
+   return qr;
 }
 
 static void exit_fix_config(void) {
    printf("Please edit your config.json and try again!\n");
    exit(255);
 }
+
+static const char *origin_name[5] = { "NONE", "ULS", "QRZ", "CACHE", NULL };
 
 // dump all the set attributes of a calldata to the screen
 bool calldata_dump(calldata_t *calldata, const char *callsign) {
@@ -387,7 +494,7 @@ bool calldata_dump(calldata_t *calldata, const char *callsign) {
    // Lookup for N0CALL was answered by the cache.
    // The answer originally came from QRZ at Mon May  8 06:18:00 AM EDT 2023
    // and will expire (if we go online) at Thu May 11 06:18:00 AM EDT 2023.
-   fprintf(stdout, "200 OK %s ONLINE %lu QRZ\n", calldata->callsign, time(NULL));
+   fprintf(stdout, "200 OK %s ONLINE %lu %s\n", calldata->callsign, time(NULL), origin_name[calldata->origin]);
    fprintf(stdout, "Callsign: %s\n", calldata->callsign);
 
    fprintf(stdout, "Cached: %s\n", (calldata->cached ? "true" : "false"));
@@ -496,6 +603,8 @@ bool calldata_dump(calldata_t *calldata, const char *callsign) {
       fprintf(stdout, "Country: %s (%d)\n", calldata->country, calldata->country_code);
    }
 
+   // end of record marker, optional, don't rely on it's presence!
+   fprintf(stdout, "+EOR\n\n");
    return true;
 }
 
@@ -669,8 +778,9 @@ int main(int argc, char **argv) {
       fprintf(stderr, "+GOODBYE Hope you had a nice session! Exiting.\n");
 
       dying = true;
+   } else {
+      log_send(mainlog, LOG_INFO, "%s/%s ready to answer requests. QRZ: %s, ULS: %s, GNIS: %s, Cache: %s\n", progname, VERSION, (callsign_use_qrz ? "On" : "Off"), (callsign_use_uls ? "On" : "Off"), (use_gnis ? "On" : "Off"), (callsign_use_cache ? "On" : "Off"));
    }
-
    while(!dying) {
       ev_run(loop, 0);
 

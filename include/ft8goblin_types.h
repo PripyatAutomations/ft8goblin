@@ -38,7 +38,8 @@ extern "C" {
    typedef enum callsign_datasrc {
       DATASRC_NONE = 0,
       DATASRC_ULS,
-      DATASRC_QRZ
+      DATASRC_QRZ,
+      DATASRC_CACHE					// cache with no other origin type set
    } callsign_datasrc_t;
 
    typedef struct calldata {

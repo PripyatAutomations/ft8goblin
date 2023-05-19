@@ -197,6 +197,9 @@ bool qrz_parse_http_data(const char *buf, calldata_t *calldata) {
          snprintf(new_calldata, callsign_len, "%s", callsign);
 //         log_send(mainlog, LOG_INFO, "Got Callsign data <%lu bytes>: %s", callsign_len, new_calldata);
 
+         // set the data source
+         calldata->origin = DATASRC_QRZ;
+
          /* Here we need to break out the fields and apply them to their respective parts of the calldata_t */
          char *call = strstr(buf, "<call>");
          if (call != NULL) {
