@@ -148,13 +148,13 @@ LogHndl *log_open(const char *path) {
       mkfifo(path+7, 0600);
 
       if (!(log->fp = fopen(path + 7, "w"))) {
-         fprintf(stderr, "Failed opening log fifo '%s' %d:%s", path+7, errno, strerror(errno));
+         fprintf(stderr, "Failed opening log fifo '%s' %d:%s\n", path+7, errno, strerror(errno));
          log->fp = stderr;
       } else
          log->type = LOG_fifo;
    } else if (strncasecmp(path, "file://", 7) == 0) {
       if (!(log->fp = fopen(path + 7, "a+"))) {
-         fprintf(stderr, "failed opening log file '%s' %d:%s", path+7, errno, strerror(errno));
+         fprintf(stderr, "failed opening log file '%s' %d:%s\n", path+7, errno, strerror(errno));
          log->fp = stderr;
       } else
          log->type = LOG_file;

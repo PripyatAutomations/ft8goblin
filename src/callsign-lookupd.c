@@ -312,16 +312,14 @@ calldata_t *callsign_cache_find(const char *callsign) {
    }
 
    int step = sqlite3_step(cache_select_stmt);
-   if (step == SQLITE_ROW) {
-      log_send(mainlog, LOG_DEBUG, "got row");
-
+   if (step == SQLITE_ROW || step == SQLITE_DONE) {
       // Find column names, so we can avoid trying to refer to them by number
       int cols = sqlite3_column_count(cache_select_stmt);
-      log_send(mainlog, LOG_DEBUG, "cols: %d\n", cols);
+//      log_send(mainlog, LOG_DEBUG, "cols: %d\n", cols);
 
       for (int i = 0; i < cols; i++) {
           const char *cname = sqlite3_column_name(cache_select_stmt, i);
-          log_send(mainlog, LOG_DEBUG, "%d: %s\n", cols, cname);
+//          log_send(mainlog, LOG_DEBUG, "%d: %s\n", cols, cname);
 
           if (strcasecmp(cname, "callsign") == 0) {
              idx_callsign = i;
@@ -720,7 +718,7 @@ int main(int argc, char **argv) {
    if (!(cfg = load_config()))
       exit_fix_config();
 
-   const char *logpath = dict_get(runtime_cfg, "logpath", "file://logs/callsign-lookupd.log");
+   const char *logpath = dict_get(runtime_cfg, "logpath", "file://callsign-lookupd.log");
 
    if (logpath != NULL) {
       mainlog = log_open(logpath);

@@ -24,3 +24,4 @@ These are not in any particular order, but stuff near the bottom is probably far
 * Document things
 * instead of timeout in seconds, timeout after X unacknowledged TXes
 * Work on making things smart enough to deal with being installed on the host
+* Flag out-of-region (gridsquare doesnt match prefix) calls when displayed
