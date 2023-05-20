@@ -7,9 +7,9 @@
       "mode": "0660"
    },
    "logging": {
-      "callsign-lookupd-logpath": "file://logs/callsign-lookupd.log",
-      "callsign-lookupd-loglevel": "debug",
-      "callsign-lookupd-pidfile": "file://run/callsign-lookupd.pid",
+      "callsign-lookup-logpath": "file://logs/callsign-lookup.log",
+      "callsign-lookup-loglevel": "debug",
+      "callsign-lookup-pidfile": "file://run/callsign-lookup.pid",
       "decoderd-ft8-loglevel": "notice",
       "decoderd-ft8-logpath": "file://logs/decoderd-ft8.%b.log",
       "decoderd-ft8-pidfile": "file://run/encoderd-ft8.%b.pid",

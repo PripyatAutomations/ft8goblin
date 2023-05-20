@@ -1,6 +1,6 @@
-VERSION = 20230512
+VERSION = 20230519
 all: world
-bins := ft8goblin decoderd-ft8 encoderd-ft8 sigcapd callsign-lookupd flac-streamerd
+bins := ft8goblin decoderd-ft8 encoderd-ft8 sigcapd callsign-lookup flac-streamerd
 
 include mk/config.mk
 include mk/ft8lib.mk
@@ -37,11 +37,11 @@ sigcapd_objs += uhd.o
 sigcapd_objs += hamlib.o
 sigcapd_objs += alsa.o		# ALSA Linux Audio
 flac_streamerd_objs += flac-streamerd.o
-callsign_lookupd_objs += callsign-lookupd.o
-callsign_lookupd_objs += fcc-db.o
-callsign_lookupd_objs += gnis-lookup.o	# place names database
-callsign_lookupd_objs += qrz-xml.o	# QRZ XML API callsign lookups (paid)
-callsign_lookupd_objs += sql.o
+callsign_lookup_objs += callsign-lookup.o
+callsign_lookup_objs += fcc-db.o
+callsign_lookup_objs += gnis-lookup.o	# place names database
+callsign_lookup_objs += qrz-xml.o	# QRZ XML API callsign lookups (paid)
+callsign_lookup_objs += sql.o
 
 ifeq (${PULSEAUDIO}, y)
 sigcapd_objs += pulse.o		# pulseaudio
@@ -58,12 +58,12 @@ ft8goblin_real_objs := $(foreach x,${ft8goblin_objs} ${common_objs},obj/${x})
 ft8decoder_real_objs := $(foreach x,${ft8decoder_objs} ${common_objs},obj/${x})
 ft8encoder_real_objs := $(foreach x,${ft8encoder_objs} ${common_objs},obj/${x})
 sigcapd_real_objs := $(foreach x,${sigcapd_objs} ${common_objs},obj/${x})
-callsign_lookupd_real_objs := $(foreach x,${callsign_lookupd_objs} ${common_objs},obj/${x})
+callsign_lookup_real_objs := $(foreach x,${callsign_lookup_objs} ${common_objs},obj/${x})
 flac_streamerd_real_objs := $(foreach x,${flac_streamerd_objs} ${common_objs},obj/${x})
 
 extra_build_targets += etc/calldata-cache.db
 real_bins := $(foreach x,${bins},bin/${x})
-extra_clean += ${ft8goblin_real_objs} ${ft8decoder_real_objs} ${ft8encoder_real_objs} ${sigcapd_real_objs} ${callsign_lookupd_real_objs} ${flac_streamerd_real_objs}
+extra_clean += ${ft8goblin_real_objs} ${ft8decoder_real_objs} ${ft8encoder_real_objs} ${sigcapd_real_objs} ${callsign_lookup_real_objs} ${flac_streamerd_real_objs}
 extra_clean += ${real_bins} ${ft8lib} ${ft8lib_objs}
 
 #################
@@ -84,9 +84,9 @@ bin/encoderd-ft8: ${ft8encoder_real_objs} ${ft8lib}
 	@echo "[Linking] $@"
 	@${CC} -o $@ ${ft8encoder_real_objs} ${ft8coder_ldflags} ${LDFLAGS}
 
-bin/callsign-lookupd: ${callsign_lookupd_real_objs}
+bin/callsign-lookup: ${callsign_lookup_real_objs}
 	@echo "[Linking] $@"
-	@${CC} -o $@ ${callsign_lookupd_real_objs} ${callsign_lookupd_ldflags} ${LDFLAGS}
+	@${CC} -o $@ ${callsign_lookup_real_objs} ${callsign_lookup_ldflags} ${LDFLAGS}
 
 bin/sigcapd: ${sigcapd_real_objs}
 	@echo "[Linking] $@"

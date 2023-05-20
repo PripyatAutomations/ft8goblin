@@ -17,7 +17,7 @@ ft8goblin_libs += ncurses termbox2 hamlib m sqlite3
 ft8coder_libs += m
 flac_streamerd_libs +=
 sigcapd_libs += uhd rtlsdr uhd rtlsdr hamlib
-callsign_lookupd_libs := m curl sqlite3
+callsign_lookup_libs := m curl sqlite3
 
 # If building DEBUG release
 ifeq (${DEBUG},y)
@@ -53,7 +53,7 @@ endif
 
 ifeq (${POSTGRESQL},y)
 ft8goblin_libs += pq
-callsign_lookupd_libs += pq
+callsign_lookup_libs += pq
 CFLAGS += -DUSE_POSTGRESQL
 endif
 
@@ -62,4 +62,4 @@ ft8coder_ldflags := ${LDFLAGS} $(foreach x,${ft8coder_libs},-l${x})
 ft8coder_ldflags += -lft8
 sigcapd_ldflags := ${LDFLAGS} $(foreach x,${sigcapd_libs},-l${x})
 flac_streamerd_ldflags := ${LDFLAGS} $(foreach x,${flac_streamerd_libs},-l${x})
-callsign_lookupd_ldflags := ${LDFLAGS} $(foreach x,${callsign_lookupd_libs},-l${x})
+callsign_lookup_ldflags := ${LDFLAGS} $(foreach x,${callsign_lookup_libs},-l${x})

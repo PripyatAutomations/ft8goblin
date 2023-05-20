@@ -31,8 +31,6 @@ Database *sql_open(const char *path) {
        exit(ENOMEM);
     }
 
-    log_send(mainlog, LOG_DEBUG, "sql_open: path: %s", path);
-
     // Is this sqlite3?
     if ((strncasecmp(path, "sqlite3:", 8) == 0)) {
        // open the sqlite database

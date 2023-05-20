@@ -24,6 +24,7 @@
 #define	MIN_HEIGHT	25
 #define	MIN_WIDTH	90
 
+// ugh globals...
 char *progname = "ft8goblin";
 TextArea *msgbox = NULL;
 const char *mycall = NULL;	// cfg:ui/mycall
@@ -568,7 +569,7 @@ void redraw_screen(void) {
       print_help();
       // redraw all TextAreas
 //      ta_redraw_all();
-      draw_fake_ta();
+//      draw_fake_ta();
       // print the input prompt
       tui_show_input();
       // and the status line
