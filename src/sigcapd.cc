@@ -7,18 +7,18 @@
  *
  * Sorry we depend on libuhd/gnuradio always ;(
  */
-#include "config.h"
-#include "debuglog.h"
+#include <libied/config.h>
+#include <libied/debuglog.h>
+#include <libied/daemon.h>
+#include <libied/dict.h>
+#include <libied/maidenhead.h>
+#include <libied/ringbuffer.h>
+#include <libied/util.h>
 #include "ft8goblin_types.h"
-#include "daemon.h"
-#include "dict.h"
 #include "hamlib.h"
-#include "maidenhead.h"
-#include "ringbuffer.h"
 #include "sound_io.h"
 #include "udp_src.h"
 #include "uhd.h"
-#include "util.h"
 
 bool dying = false;
 const char *progname = "sigcapd";

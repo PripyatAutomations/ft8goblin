@@ -1,7 +1,6 @@
-#include "config.h"
-#include "debuglog.h"
-#include "ft8goblin_types.h"
-#include "util.h"
+#include <libied/cfg.h>
+#include <libied/debuglog.h>
+#include <libied/util.h>
 #include <limits.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -9,6 +8,7 @@
 // XXX: We should mirror log messages above a set priority into the msgbox TextArea if it exists ;)
 // from main program usually
 extern char *progname;
+extern bool dying;
 LogHndl *mainlog = NULL;
 
 static struct log_levels {

@@ -30,17 +30,18 @@ extern "C" {
    extern int modal_dialog(int buttons, int border_fg, int border_bg, int title_fg, int title_bg, const char *title, int text_fg, int text_bg, const char *fmt, ...);
 
    // ui functions
-   extern void tui_init(void);
+   extern void tui_init(void (*cb)());
    extern void tui_resize_window(struct tb_event *evt);
    extern void tui_shutdown(void);
-
-   // This comes from the user program
-   extern void redraw_screen(void);
+   extern void tui_redraw(void);
+   extern time_t now;
+   extern bool dying;
    extern int active_band;		// Which band are we TXing on?
    extern int active_pane;		// active pane (0: TextArea, 1: TX input)
    extern int height, width;
    extern int line_status;		// status line
    extern int line_input;		// input field
+   extern TextArea *msgbox;
 #ifdef __cplusplus
 };
 #endif

@@ -7,6 +7,5 @@
  *
  * Some day we'll support importing ADIF into the logbook database too
  */
-#include "config.h"
-#include "ft8goblin_types.h"
-#include "debuglog.h"
+#include <libied/cfg.h>
+#include <libied/debuglog.h>

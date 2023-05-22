@@ -12,12 +12,12 @@ etc_install_path ?= /etc/ft8goblin
 lib_install_path := ${PREFIX}/lib
 
 # required libraries: -l${x} will be expanded later...
-common_libs += yajl ev
-ft8goblin_libs += ncurses termbox2 hamlib m sqlite3
-ft8coder_libs += m
+common_libs += yajl ev ied sqlite3 m termbox2
+ft8goblin_libs += hamlib
+ft8coder_libs +=
 flac_streamerd_libs +=
 sigcapd_libs += uhd rtlsdr uhd rtlsdr hamlib
-callsign_lookup_libs := m curl sqlite3
+callsign_lookup_libs := curl
 
 # If building DEBUG release
 ifeq (${DEBUG},y)
@@ -32,11 +32,11 @@ CFLAGS += ${SAN_FLAGS} ${WARN_FLAGS} ${ERROR_FLAGS} ${OPT_FLAGS} -DDEBUG=1
 
 C_STD := -std=gnu11
 CXX_STD := -std=gnu++17
-CFLAGS += ${C_STD} -I./ext/ -I./include/ -I./ext/ft8_lib/ -fPIC
+CFLAGS += ${C_STD} -I./ext/ -I./include/ -I./ext/ft8_lib/ -I./ -I../ -fPIC
 CFLAGS += -DVERSION="\"${VERSION}\""
 CXXFLAGS := ${CXX_STD} $(filter-out ${C_STD},${CFLAGS})
 LDFLAGS += -L./lib/ ${SAN_FLAGS}
-LDFLAGS += $(foreach x,${common_libs},-l${x})
+#LDFLAGS += $(foreach x,${common_libs},-l${x})
 ft8lib_cflags := -fPIC
 
 
@@ -57,9 +57,9 @@ callsign_lookup_libs += pq
 CFLAGS += -DUSE_POSTGRESQL
 endif
 
-ft8goblin_ldflags := ${LDFLAGS} $(foreach x,${ft8goblin_libs},-l${x})
-ft8coder_ldflags := ${LDFLAGS} $(foreach x,${ft8coder_libs},-l${x})
+ft8goblin_ldflags := ${LDFLAGS} $(foreach x,${ft8goblin_libs} ${common_libs},-l${x})
+ft8coder_ldflags := ${LDFLAGS} $(foreach x,${ft8coder_libs} ${common_libs},-l${x})
 ft8coder_ldflags += -lft8
-sigcapd_ldflags := ${LDFLAGS} $(foreach x,${sigcapd_libs},-l${x})
-flac_streamerd_ldflags := ${LDFLAGS} $(foreach x,${flac_streamerd_libs},-l${x})
-callsign_lookup_ldflags := ${LDFLAGS} $(foreach x,${callsign_lookup_libs},-l${x})
+sigcapd_ldflags := ${LDFLAGS} $(foreach x,${sigcapd_libs} ${common_libs},-l${x})
+flac_streamerd_ldflags := ${LDFLAGS} $(foreach x,${flac_streamerd_libs} ${common_libs},-l${x})
+callsign_lookup_ldflags := ${LDFLAGS} $(foreach x,${callsign_lookup_libs} ${common_libs},-l${x})

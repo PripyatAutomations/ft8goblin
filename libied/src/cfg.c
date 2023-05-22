@@ -1,11 +1,10 @@
 /*
  * json configuration parser
  */
-#include "config.h"
-#include "dict.h"
-#include "util.h"
-#include "debuglog.h"
-#include "ft8goblin_types.h"
+#include <libied/cfg.h>
+#include <libied/dict.h>
+#include <libied/util.h>
+#include <libied/debuglog.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>

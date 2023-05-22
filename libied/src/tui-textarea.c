@@ -3,11 +3,10 @@
  *
  * This code probably isn't very reusable yet. That's being worked on...
  */
-#include "config.h"
-#include "debuglog.h"
-#include "tui.h"
-#include "subproc.h"
-#include "ft8goblin_types.h"
+#include <libied/cfg.h>
+#include <libied/debuglog.h>
+#include <libied/tui.h>
+#include <libied/subproc.h>
 #include <errno.h>
 #include <termbox2.h>
 extern TextArea *msgbox;

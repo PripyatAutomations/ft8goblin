@@ -1,5 +1,5 @@
-#if	!defined(_config_h)
-#define	_config_h
+#if	!defined(_cfg_h)
+#define	_cfg_h
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -34,4 +34,4 @@ extern "C" {
 };
 #endif
 
-#endif	// !defined(_config_h)
+#endif	// !defined(_cfg_h)

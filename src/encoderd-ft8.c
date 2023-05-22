@@ -1,5 +1,5 @@
-#include "config.h"
-#include "debuglog.h"
+#include <libied/cfg.h>
+#include <libied/debuglog.h>
 #include "ft8goblin_types.h"
 #include <stdio.h>
 #include <stdlib.h>

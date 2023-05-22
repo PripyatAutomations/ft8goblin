@@ -9,16 +9,22 @@
  *	InputArea	Single line input box with cursor controls and history.
  *
  */
-#include "config.h"
-#include "debuglog.h"
-#include "tui.h"
-#include "subproc.h"
-#include "ft8goblin_types.h"
+#include <libied/cfg.h>
+#include <libied/debuglog.h>
+#include <libied/tui.h>
+#include <libied/subproc.h>
 #include <errno.h>
 #include <regex.h>
 #include <termbox2.h>
 
-extern TextArea *msgbox;
+TextArea *msgbox = NULL;
+bool dying = false;
+time_t now = 0;
+int	line_status = -1;		// status line
+int 	line_input = -1;		// input field
+int	height = -1, width = -1;
+
+void	(*redraw_screen_cb)(void) = NULL;
 
 ////////////////////////////////////////////////////////////
 // These let us print unicode to an exact screen location //
@@ -97,6 +103,12 @@ ColorPair parse_color_str(const char *str) {
    return cp;
 }
 
+void tui_redraw(void) {
+   if (redraw_screen_cb != NULL) {
+      redraw_screen_cb();
+   }
+}
+
 void tui_resize_window(struct tb_event *evt) {
    // if we got passed an event, use it's data, otherwise query termbox2 for height/width of screen
    if (evt == NULL) {
@@ -117,7 +129,7 @@ void tui_resize_window(struct tb_event *evt) {
    } else {
       log_send(mainlog, LOG_NOTICE, "display resolution %dx%d is acceptable!", width, height);
       ta_resize_all();
-      redraw_screen();
+      tui_redraw();
    }
    line_status = height - 1;
    line_input = height - 2;
@@ -141,7 +153,8 @@ void tui_shutdown(void) {
    tb_shutdown();
 }
 
-void tui_init(void) {
+void tui_init(void (*cb)()) {
+   redraw_screen_cb = cb;
    tb_init();
    tb_set_input_mode(TB_INPUT_ALT | TB_INPUT_MOUSE);
    // we should look at this again when we get configurable color schemes going

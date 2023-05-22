@@ -1,10 +1,10 @@
 /*
  * A reusable implementation of a ring buffer with timestamps for FIFO usage
  */
-#include "config.h"
-#include "debuglog.h"
-#include "ft8goblin_types.h"
-#include "ringbuffer.h"
+#include <libied/config.h>
+#include <libied/debuglog.h>
+#include <libied/ringbuffer.h>
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>

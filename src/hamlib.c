@@ -5,8 +5,8 @@
  *
  * ft8goblin and sigcapd both use this, to allow tunable source/sinks via hamlib
  */
-#include "config.h"
-#include "debuglog.h"
+#include <libied/cfg.h>
+#include <libied/debuglog.h>
 #include "ft8goblin_types.h"
 #include "hamlib.h"
 #include <stdio.h>

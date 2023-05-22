@@ -4,8 +4,7 @@
  * This is done via named pipes, to keep things simple.
  */
 
-#include "config.h"
-#include "ft8goblin_types.h"
+#include <libied/cfg.h>
 #include <sys/types.h>
 #include <stdio.h>
 #include <fcntl.h>

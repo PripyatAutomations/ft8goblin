@@ -1,5 +1,5 @@
-#include "config.h"
-#include "sql.h"
+#include <libied/config.h>
+#include <libied/sql.h>
 #include "ft8goblin_types.h"
 
 #if	!defined(_fcc_db_h)

@@ -5,19 +5,20 @@
 // XXX: This would make things a lot more pleasant for everyone!
 // XXX: a lot of this code belongs in ft8goblin.c... someday it'll happen
 //
-#include "config.h"
-#include "debuglog.h"
-#include "tui.h"
-#include "util.h"
-#include "subproc.h"
-#include "ft8goblin_types.h"
+#include <libied/cfg.h>
+#include <libied/debuglog.h>
+#include <libied/tui.h>
+#include <libied/util.h>
+#include <libied/subproc.h>
 #include <ev.h>
 #include <ctype.h>
+// XXX: Fix this!
+#include "../include/ft8goblin_types.h"
+extern void redraw_screen(void);		// src/tui-input.c
 
 static ev_io termbox_watcher, termbox_resize_watcher;
 static ev_timer periodic_watcher;
 extern TextArea *msgbox;
-time_t now = 0;
 //////
 // These all are internal to tui-input and should probably end up static...
 static const size_t input_buf_sz = TUI_INPUT_BUFSZ;		// really this is excessive even...

@@ -1,6 +1,7 @@
 #if	!defined(_tui_menu_h)
 #define	_tui_menu_h
-
+#include "config.h"
+#include <libied/cfg.h>
 #ifdef __cplusplus
 extern "C" {
 #endif

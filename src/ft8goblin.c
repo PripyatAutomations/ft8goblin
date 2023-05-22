@@ -1,16 +1,17 @@
 /*
  * This needs much improvement and a lot of src/tui-textarea.c belongs as a keymap here
  */
+#include <libied/cfg.h>
 #include "config.h"
 #include "ft8goblin_types.h"
-#include "subproc.h"
-#include "util.h"
-#include "tui.h"
-#include "debuglog.h"
+#include <libied/subproc.h>
+#include <libied/util.h>
+#include <libied/tui.h>
+#include <libied/debuglog.h>
+#include <libied/daemon.h>
+#include <libied/subproc.h>
 #include "watch.h"
-#include "daemon.h"
 #include "qrz-xml.h"
-#include "subproc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -22,19 +23,14 @@
 
 // BUG: These belong in a header...
 #define	MIN_HEIGHT	25
-#define	MIN_WIDTH	90
+#define	MIN_WIDTH	110
 
 // ugh globals...
 char *progname = "ft8goblin";
-TextArea *msgbox = NULL;
 const char *mycall = NULL;	// cfg:ui/mycall
 const char *gridsquare = NULL;	// cfg:ui/gridsquare
-bool	dying = 0;		// Are we shutting down?
 bool	tx_enabled = false;		// Master toggle to TX mode.
 bool	tx_pending = false;
-int	line_status = -1;		// status line
-int 	line_input = -1;		// input field
-int	height = -1, width = -1;
 int	active_band = 40;		// Which band are we TXing on?
 bool	tx_even = false;		// TX even or odd cycle?
 bool	cq_only = false;		// Only show CQ & active QSOs?
@@ -43,6 +39,7 @@ bool	auto_cycle = true;		// automatically switch to next message on RXing a resp
 tx_mode_t tx_mode = TX_MODE_NONE;	// mode
 rb_buffer_t *callsign_lookup_history = NULL;
 size_t callsign_lookup_history_sz = 1;
+int	max_rigs = 0;			// maximum rigs
 
 static void exit_fix_config(void) {
    printf("Please edit your config.json and try again!\n");
@@ -257,21 +254,29 @@ static void print_status(void) {
    offset += 2;
 
    // print the PTT status
-#if	0
-   printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "[");
-   offset++;
-   printf_tb(offset, line_status, TB_GREEN|TB_BOLD, 0, "PTT:");
-   offset += 4;
    // Explode the list of radios actively PTTing
+#if	0
+   int active_rigs = 0;
    for (int i = 0; i < max_rigs; i++) {
       if (rigs[i].ptt_active) {
+         active_rigs++;
+         // only show once
+         if (active_rigs == 1) {
+            printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "[");
+            offset++;
+            printf_tb(offset, line_status, TB_GREEN|TB_BOLD, 0, "PTT:");
+            offset += 4;
+         }
          printf_tb(offset, line_status, TB_RED|TB_BOLD, 0, "%d", i);
       }
    }
-   printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "] ");
-   offset += 2;
+   if (active_rigs > 0) {
+      printf_tb(offset, line_status, TB_WHITE|TB_BOLD, 0, "] ");
+      offset += 2;
+   }
 #endif
 
+   // version
    char verbuf[128];
    memset(verbuf, 0, 128);
    snprintf(verbuf, 128, "ft8goblin/%s", VERSION);
@@ -452,9 +457,9 @@ calldata_t *fake_q;
 void draw_fake_ta(void) {
    char datebuf[128];
 
-   time_t now = time(NULL);
+   time_t mynow = time(NULL);
    struct tm *tm = NULL;
-   tm = localtime(&now);
+   tm = localtime(&mynow);
    memset(datebuf, 0, 128);
    strftime(datebuf, 128, "%H:%M:15", tm);
    int x = 0,
@@ -515,31 +520,6 @@ void draw_fake_ta(void) {
          fprintf(stderr, "draw_fake_ta: out of memory!\n");
          exit(ENOMEM);
       }
-      
-      memset(fake_q, 0, sizeof(calldata_t));
-      memset(fake_q, 0, sizeof(calldata_t));
-      snprintf(fake_q->callsign, sizeof(fake_q->callsign), "AA1AB");
-      fake_q->dxcc = 291;
-      snprintf(fake_q->grid, MAX_GRID_LEN, "EM32");
-      snprintf(fake_q->previous_call, MAX_CALLSIGN, "N0FUX");
-      snprintf(fake_q->first_name, sizeof(fake_q->first_name), "Robert");
-      snprintf(fake_q->last_name, sizeof(fake_q->last_name), "Test");
-      snprintf(fake_q->address1, sizeof(fake_q->address1), "123 Sesame St");
-      snprintf(fake_q->address2, sizeof(fake_q->address2), "Earth City");
-      snprintf(fake_q->state, sizeof(fake_q->state), "MO");
-      snprintf(fake_q->zip, sizeof(fake_q->zip), "63045");
-      snprintf(fake_q->country, sizeof(fake_q->country), "USA");
-      snprintf(fake_q->email, sizeof(fake_q->email), "bob@test.com");
-      snprintf(fake_q->opclass, sizeof(fake_q->opclass), "G");
-      snprintf(fake_q->codes, sizeof(fake_q->opclass), "HVIE");
-//      snprintf(fake_q->phone, sizeof(fake_q->phone), "987-654-3210");
-//      fake_q->country_code = 
-      fake_q->latitude = 32.021;
-      fake_q->longitude = -93.792;
-      fake_q->license_expiry = 1835585999;
-      fake_q->license_effective = 1519880400;
-      fake_q->origin = DATASRC_QRZ;
-      snprintf(fake_q->url, sizeof(fake_q->url), "https://qrz.com/db/AA1AB");
 
       // this is first callsign looked up by us, prepare the RingBuffer!
       if (callsign_lookup_history == NULL) {
@@ -607,7 +587,7 @@ int main(int argc, char **argv) {
 
 
    // setup the TUI toolkit
-   tui_init();
+   tui_init(&redraw_screen);
    tui_input_init();
    tui_io_watcher_init();
 
@@ -628,16 +608,19 @@ int main(int argc, char **argv) {
    // setup subprocess keeper
    subproc_init();
    //	sigcapd (one instance)
+
    //	ft8capture (single instance per device)
         // XXX: Walk the tree at cfg:devices
         // XXX: Walk the tree at cfg:bands
         // XXX: Figure out which bands can be connected to which devices and start slicers in sigcapd
+
    //	ft8decoder (one per band)
+
    // 	callsign-lookupd (one instance)
-   const char *args[2] = { "./bin/callsign-lookupd", NULL };
-   int callsign_lookupd_slot = subproc_create("callsign-lookupd:main", "./bin/callsign-lookupd", args, 2);
+   const char *args[2] = { "./bin/callsign-lookup", NULL };
+   int callsign_lookupd_slot = subproc_create("callsign-lookup:main", "./bin/callsign-lookup", args, 2);
    if (callsign_lookupd_slot < 0) {
-      log_send(mainlog, LOG_CRIT, "Well crap.. failed to start callsign-lookupd");
+      log_send(mainlog, LOG_CRIT, "Failed to start callsign-lookup process");
    }
 
    // main loop...

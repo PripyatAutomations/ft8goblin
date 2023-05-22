@@ -25,7 +25,7 @@ ft8lib_objs += obj/ft8lib/ft8/unpack.o
 
 ${ft8lib}: ${ft8lib_objs}
 	@echo "[SO] $^ -> $@"
-	@${CC} ${LDFLAGS} -fPIC -shared -Wl,-soname,$@ -lm -o $@ $^
+	${CC} ${LDFLAGS} -fPIC -shared -Wl,-soname,$@ -lm -o $@ $^
 
 obj/ft8lib/common/%.o: ext/ft8_lib/common/%.c
 	@echo "[CC] $< -> $@"

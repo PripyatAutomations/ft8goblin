@@ -23,7 +23,7 @@
  * create a benchmark program and run it.
  */
 #include <string.h>
-#include "dict.h"
+#include <libied/dict.h>
 
 /* Minimum dictionary size to start with */
 #define DICT_MIN_SZ     8

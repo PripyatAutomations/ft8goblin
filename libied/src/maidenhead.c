@@ -1,10 +1,9 @@
 /*
  * Utility functions for dealing with maidenhead coordinates and translating to/from WGS-84.
  */
-#include "config.h"
-#include "ft8goblin_types.h"
-#include "maidenhead.h"
-#include "qrz-xml.h"
+#include <libied/cfg.h>
+#include <libied/maidenhead.h>
+#include "./config.h"
 
 double deg2rad(double deg) {
   return (deg * pi / 180);

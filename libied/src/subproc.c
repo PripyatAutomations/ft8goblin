@@ -9,7 +9,7 @@
  *	* If a process has crashed more than cfg:supervisor/max-crashes in the last cfg:supervisor/max-crash-time then don't bother respawning it..
  * XXX: Add more error checking!
  */
-#include "config.h"
+#include <libied/cfg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -22,10 +22,9 @@
 #include <stdbool.h>
 #include <ev.h>
 #include <termbox2.h>
-#include "ft8goblin_types.h"
-#include "subproc.h"
-#include "tui.h"
-#include "debuglog.h"
+#include <libied/subproc.h>
+#include <libied/tui.h>
+#include <libied/debuglog.h>
 
 extern TextArea *msgbox;
 extern int y;			// from ui.c
@@ -67,28 +66,28 @@ static void subproc_cb(EV_P_ ev_child *w, int revents) {
 
 static void stdin_cb(EV_P_ ev_io *w, int revents) {
     if (EV_ERROR & revents) {
-        fprintf(stderr, "Error event in stdin watcher\n");
+        log_send(mainlog, LOG_CRIT, "Error event in stdin watcher");
         return;
     }
-    log_send(mainlog, LOG_DEBUG, "stdin: write waiting\n");
+    log_send(mainlog, LOG_DEBUG, "stdin: write waiting");
     ev_io_stop(loop, w);
 }
 
 static void stdout_cb(EV_P_ ev_io *w, int revents) {
     if (EV_ERROR & revents) {
-        log_send(mainlog, LOG_DEBUG, "Error event in stdout watcher\n");
+        log_send(mainlog, LOG_CRIT, "Error event in stdout watcher");
         return;
     }
-    log_send(mainlog, LOG_CRIT, "stdout: read waiting\n");
+    log_send(mainlog, LOG_DEBUG, "stdout: read waiting");
     ev_io_stop(loop, w);
 }
 
 static void stderr_cb(EV_P_ ev_io *w, int revents) {
     if (EV_ERROR & revents) {
-        log_send(mainlog, LOG_CRIT, "Error event in stderr watcher\n");
+        log_send(mainlog, LOG_CRIT, "Error event in stderr watcher");
         return;
     }
-    log_send(mainlog, LOG_CRIT, "stderr: read waiting\n");
+    log_send(mainlog, LOG_DEBUG, "stderr: read waiting");
     ev_io_stop(loop, w);
 }
 

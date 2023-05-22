@@ -1,7 +1,5 @@
 #if	!defined(_maidenhead_h)
 #define	_maidenhead_h
-#include "ft8goblin_types.h"
-#include "qrz-xml.h"
 #include <math.h>
 #if	!defined(pi)
 #define pi 3.14159265358979323846
@@ -11,6 +9,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+   typedef struct Coordinates {
+      float	latitude;
+      float	longitude;
+   } Coordinates;
 
 extern double deg2rad(double deg);
 extern double rad2deg(double rad);

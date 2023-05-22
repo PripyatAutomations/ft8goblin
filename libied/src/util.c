@@ -1,8 +1,8 @@
-#include "config.h"
-#include "debuglog.h"
-#include "util.h"
-#include "ft8goblin_types.h"
-
+#include <libied/cfg.h>
+#include <libied/debuglog.h>
+#include <libied/util.h>
+#include <string.h>
+#include <sys/stat.h>
 // toggle an intbool (<= 0 is off, >= 1 is on)
 void toggle(int *v) {
    if (*v <= 0)

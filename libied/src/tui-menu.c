@@ -1,8 +1,7 @@
-#include "config.h"
-#include "debuglog.h"
-#include "util.h"
-#include "tui.h"
-#include "ft8goblin_types.h"
+#include <libied/cfg.h>
+#include <libied/debuglog.h>
+#include <libied/util.h>
+#include <libied/tui.h>
 #include <errno.h>
 #include <termbox2.h>
 
@@ -12,7 +11,7 @@ int	menu_level = 0;		// Which menu level are we in? This is used to keep track o
 
 // main menu items
 menu_item_t menu_main_items[] = {
-   { "View config", "View the active json configuration", view_config },
+//   { "View config", "View the active json configuration", view_config },
    { (char *)NULL, (char *)NULL, (int *)NULL }
 };
 
@@ -110,7 +109,7 @@ int menu_show(menu_t *menu, int item) {
    }
 
    tb_clear();
-   redraw_screen();
+   tui_redraw();
 
    // Add the menu to the menu history 
    menu_history_push(menu, 0);
