@@ -3,14 +3,12 @@
  */
 #include <libied/cfg.h>
 #include <libied/maidenhead.h>
+#include <math.h>
+#define RADIUS_EARTH 6371.0 // Earth's radius in kilometers
 #include "./config.h"
 
-double deg2rad(double deg) {
-  return (deg * pi / 180);
-}
-
 double rad2deg(double rad) {
-  return (rad * 180 / pi);
+  return (rad * 180 / M_PI);
 }
 
 /*
@@ -42,4 +40,29 @@ char *latlon2maidenhead(Coordinates *c) {
     sprintf(square + strlen(square), "%d%d%c%c", long_digit_1, lat_digit_1, long_digit_2 + '0', lat_digit_2 + '0');
     memcpy(out, square, strlen(square));
     return out;
+}
+
+double deg2rad(double degrees) {
+    return degrees * M_PI / 180.0;
+}
+
+double calculateBearing(double lat1, double lon1, double lat2, double lon2) {
+    double dLon = deg2rad(lon2 - lon1);
+    double y = sin(dLon) * cos(deg2rad(lat2));
+    double x = cos(deg2rad(lat1)) * sin(deg2rad(lat2)) - sin(deg2rad(lat1)) * cos(deg2rad(lat2)) * cos(dLon);
+    double bearing = atan2(y, x);
+    bearing = fmod(bearing + 2 * M_PI, 2 * M_PI); // Convert to positive value
+    bearing = bearing * 180.0 / M_PI; // Convert to degrees
+    return bearing;
+}
+
+double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    double dLat = deg2rad(lat2 - lat1);
+    double dLon = deg2rad(lon2 - lon1);
+    double a = sin(dLat / 2) * sin(dLat / 2) +
+               cos(deg2rad(lat1)) * cos(deg2rad(lat2)) *
+               sin(dLon / 2) * sin(dLon / 2);
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    double distance = RADIUS_EARTH * c;
+    return distance;
 }

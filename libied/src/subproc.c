@@ -292,6 +292,11 @@ int subproc_killall(int signum) {
          continue;
       }
 
+      // catch obvious errors (init is pid 1)
+      if (sp->pid <= 1) {
+         continue;
+      }
+
       ta_printf(msgbox, "$YELLOW$sending %s (%d) to child process %s <%d>...", signame, signum, sp->name, sp->pid);
       log_send(mainlog, LOG_NOTICE, "sending %s (%d) to child process %s <%d>...", signame, signum, sp->name, sp->pid);
       tb_present();
@@ -301,11 +306,6 @@ int subproc_killall(int signum) {
       sp->needs_restarted = 0;
       sp->watchdog_start = 0;
       sp->watchdog_events = 0;
-
-      // catch obvious errors (init is pid 1)
-      if (sp->pid <= 1) {
-         continue;
-      }
 
       // if successfully sent signal, increment rv, so we'll sleep if called from subproc_shutdown()
       if (kill(sp->pid, signum) == 0)

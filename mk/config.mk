@@ -1,5 +1,5 @@
 # Are we building debug? y or n.
-DEBUG=y
+DEBUG=n
 PREFIX ?= /usr
 PULSEAUDIO=y
 ALSA=n
@@ -25,7 +25,7 @@ WARN_FLAGS := -Wall -pedantic -Wno-unused-variable -Wno-unused-function #-Wno-mi
 ERROR_FLAGS += -Werror 
 # Sanitizer options
 SAN_FLAGS := -fsanitize=address
-SAN_LDFLAGS := ${SAN_FLAGS} -static-libasan
+SAN_LDFLAGS := ${SAN_FLAGS} -lasan
 OPT_FLAGS += -ggdb3 -fno-omit-frame-pointer
 endif
 OPT_FLAGS += -O2

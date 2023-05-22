@@ -48,23 +48,23 @@ extra_clean += ${real_bins} ${ft8lib} ${ft8lib_objs}
 #################
 bin/ft8goblin: ${ft8goblin_real_objs} | lib/libtermbox2.so lib/libied.so
 	@echo "[Linking] $@"
-	${CC} -o $@ ${SAN_LDFLAGS} ${ft8goblin_real_objs} ${ft8goblin_ldflags} ${LDFLAGS}
+	${CC} -o $@ ${SAN_LDFLAGS} ${ft8goblin_real_objs} ${ft8goblin_ldflags}
 
 bin/decoderd-ft8: ${ft8decoder_real_objs} ${ft8lib}
 	@echo "[Linking] $@"
-	${CC} -o $@ ${SAN_LDFLAGS} ${ft8decoder_real_objs} ${ft8coder_ldflags} ${LDFLAGS}
+	${CC} -o $@ ${SAN_LDFLAGS} ${ft8decoder_real_objs} ${ft8coder_ldflags}
 
 bin/encoderd-ft8: ${ft8encoder_real_objs} ${ft8lib}
 	@echo "[Linking] $@"
-	${CC} -o $@ ${SAN_LDFLAGS} ${ft8encoder_real_objs} ${ft8coder_ldflags} ${LDFLAGS}
+	${CC} -o $@ ${SAN_LDFLAGS} ${ft8coder_ldflags} ${ft8encoder_real_objs} ${ft8coder_ldflags}
 
 bin/sigcapd: ${sigcapd_real_objs}
 	@echo "[Linking] $@"
-	@${CXX} -o $@ ${SAN_LDFLAGS} ${sigcapd_real_objs} ${sigcapd_ldflags} ${LDFLAGS}
+	@${CXX} -o $@ ${SAN_LDFLAGS} ${sigcapd_real_objs} ${sigcapd_ldflags}
 
 bin/flac-streamerd: ${flac_streamerd_real_objs}
 	@echo "[Linking] ${flac_streamerd_real_objs} to $@"
-	${CXX} -o $@ ${SAN_LDFLAGS} ${flac_streamerd_real_objs} ${flac_streamerd_ldflags} ${LDFLAGS}
+	${CXX} -o $@ ${SAN_LDFLAGS} ${flac_streamerd_real_objs} ${flac_streamerd_ldflags}
 
 obj/sigcapd.o: src/sigcapd.cc
 	@echo "[CXX] $^ -> $@"
