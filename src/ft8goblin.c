@@ -19,7 +19,7 @@
 #include <time.h>
 #include <ev.h>
 #include <evutil.h>
-#include <termbox2.h>
+#include <ext/termbox2/termbox2.h>
 
 // BUG: These belong in a header...
 #define	MIN_HEIGHT	25
