@@ -3,7 +3,7 @@
 #include <libied/util.h>
 #include <libied/tui.h>
 #include <errno.h>
-#include <termbox2.h>
+#include <termbox2/termbox2.h>
 
 extern TextArea *msgbox;
 menu_history_t menu_history[MAX_MENULEVEL];	// history for ESC (go back) in menus ;)

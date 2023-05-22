@@ -19,7 +19,7 @@
 #include <sys/wait.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <termbox2.h>
+#include <termbox2/termbox2.h>
 #include <ev.h>
 #include <libied/cfg.h>
 #include <libied/subproc.h>

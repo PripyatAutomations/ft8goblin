@@ -8,7 +8,7 @@
 #include <libied/tui.h>
 #include <libied/subproc.h>
 #include <errno.h>
-#include <termbox2.h>
+#include <termbox2/termbox2.h>
 extern TextArea *msgbox;
 
 // Let's not make this public, but rather provide any utilities needed...

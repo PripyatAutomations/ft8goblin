@@ -15,7 +15,7 @@
 #include <libied/subproc.h>
 #include <errno.h>
 #include <regex.h>
-#include <termbox2.h>
+#include <termbox2/termbox2.h>
 
 TextArea *msgbox = NULL;
 bool dying = false;
