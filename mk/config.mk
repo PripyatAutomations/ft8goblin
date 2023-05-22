@@ -16,7 +16,7 @@ common_libs += yajl ev ied sqlite3 m termbox2
 ft8goblin_libs += hamlib
 ft8coder_libs +=
 flac_streamerd_libs +=
-sigcapd_libs += uhd rtlsdr uhd rtlsdr hamlib
+sigcapd_libs += hamlib # uhd rtlsdr
 callsign_lookup_libs := curl
 
 # If building DEBUG release
