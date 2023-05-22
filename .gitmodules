@@ -10,3 +10,6 @@
 [submodule "ext/rmsmap"]
 	path = ext/rmsmap
 	url = https://github.com/PripyatAutomations/rmsmap
+[submodule "ext/callsign-lookup"]
+	path = ext/callsign-lookup
+	url = https://github.com/PripyatAutomations/callsign-lookup

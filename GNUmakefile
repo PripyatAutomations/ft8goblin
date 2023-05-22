@@ -89,7 +89,7 @@ todo:
 	grep -Hn "XXX:" include/* src/* * etc/* sql/* scripts/* mk/* 2>/dev/null | less
 
 include mk/compile.mk
-include mk/yajl.mk
+#include mk/yajl.mk
 include mk/help.mk
 include mk/callsign-lookup.mk
 include mk/clean.mk
