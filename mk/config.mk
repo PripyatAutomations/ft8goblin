@@ -2,8 +2,8 @@
 DEBUG=y
 PREFIX ?= /usr
 PULSEAUDIO=y
-ALSA=y
-POSTGRESQL=y
+ALSA=n
+POSTGRESQL=n
 
 termbox_lib_ver := 2.0.0
 
