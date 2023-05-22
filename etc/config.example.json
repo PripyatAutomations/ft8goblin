@@ -44,6 +44,7 @@
       "qrz-api-url": "https://xmldata.qrz.com/xml/1.34/",
       "qrz-username": "xxxx",
       "qrz-password": "xxxx",
+      "retry-delay": "30m",
       "use-cache": "true",
       "cache-db": "sqlite3:etc/calldata-cache.db",
       "cache-online-lookups": "true",
