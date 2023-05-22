@@ -25,6 +25,7 @@ WARN_FLAGS := -Wall -pedantic -Wno-unused-variable -Wno-unused-function #-Wno-mi
 ERROR_FLAGS += -Werror 
 # Sanitizer options
 SAN_FLAGS := -fsanitize=address
+SAN_LDFLAGS := ${SAN_FLAGS} -static-libasan
 OPT_FLAGS += -ggdb3 -fno-omit-frame-pointer
 endif
 OPT_FLAGS += -O2
@@ -35,7 +36,7 @@ CXX_STD := -std=gnu++17
 CFLAGS += ${C_STD} -I./ext/ -I./include/ -I./ext/ft8_lib/ -I./ -I../ -fPIC
 CFLAGS += -DVERSION="\"${VERSION}\""
 CXXFLAGS := ${CXX_STD} $(filter-out ${C_STD},${CFLAGS})
-LDFLAGS += -L./lib/ ${SAN_FLAGS}
+LDFLAGS += -L./lib/
 #LDFLAGS += $(foreach x,${common_libs},-l${x})
 ft8lib_cflags := -fPIC
 
