@@ -81,16 +81,17 @@ extra_clean_targets += libied_clean
 libied_clean:
 	${MAKE} -C libied clean
 
-# Build all subdirectories first, then our binary
-world: ${extra_build_targets} ${real_bins} bin/callsign-lookup
 
 todo:
 	# We would use find here, but there's probably XXX: in subdirs we don't care about...
 	grep -Hn "XXX:" include/* src/* * etc/* sql/* scripts/* mk/* 2>/dev/null | less
 
 include mk/compile.mk
-#include mk/yajl.mk
+include mk/yajl.mk
 include mk/help.mk
 include mk/callsign-lookup.mk
 include mk/clean.mk
 include mk/install.mk
+
+# Build all subdirectories first, then our binary
+world: ${extra_build_targets} ${real_bins} bin/callsign-lookup

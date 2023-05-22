@@ -4,11 +4,11 @@ Here's a rough draft of how things work
 		Provides a user interface for this mess.
 		Supervises subprocess below:
 
-	callsign-lookupd
+	callsign-lookup
 		Looks up call signs via QRZ XML API and local FCC ULS database.
 		Caches the results of lookups for fast recall, using sqlite3.
-		- You can call it directly with a single argument (a
-		  callsign) to look up a record on QRZ / ULS.
+		- You can call it directly with a list of callsigns to look up a record on QRZ / ULS
+		quickly.
 
 	decoderd-ft8
 		Decodes FT4 and FT8 messages on various bands

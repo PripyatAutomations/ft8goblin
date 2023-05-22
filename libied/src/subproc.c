@@ -9,7 +9,6 @@
  *	* If a process has crashed more than cfg:supervisor/max-crashes in the last cfg:supervisor/max-crash-time then don't bother respawning it..
  * XXX: Add more error checking!
  */
-#include <libied/cfg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -20,8 +19,9 @@
 #include <sys/wait.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <ev.h>
 #include <termbox2.h>
+#include <ev.h>
+#include <libied/cfg.h>
 #include <libied/subproc.h>
 #include <libied/tui.h>
 #include <libied/debuglog.h>

@@ -1,16 +1,15 @@
 PREREQS
 -------
 You will need the following packages installed on the host:
-	libev-dev libyajl-dev gnuradio libuhd librtlsdr-dev libxml2-dev
-	libsqlite3-mod-spatialite librasterlite2-dev libspatialite-dev
-	spatialite-bin libmxml-dev
+	libev-dev libyajl-dev libsqlite3-mod-spatialite libspatialite-dev
+	spatialite-bin gnuradio libuhd librtlsdr-dev
 
 If you want to use the perl scripts in scripts, you'll probably want these too:
 	libdbi-perl libxml-simple-perl libdbd-sqlite3-perl libdbd-pg-perl
 	libdbd-mysql-perl libterm-readline-perl-perl liblog-log4perl-perl
 	libtext-csv-perl
 
-If you'd like to use postgresql:
+If you'd like to use postgresql: (not supported yet)
 	libpq-dev postgresql-doc postgresql-postgis postgresql-postgis-scripts
 	postgresql-pgrouting postgresql-pgrouting-scripts postgis
 
@@ -22,6 +21,7 @@ BUILDING
 --------
 Edit config.mk to reflect any desired build-time optional configuration
 
+Be sure to 'git submodule init; git submodule update'
 There's no need to manually build things unless intending to do an
 (UNSUPPORTED AT THIS TIME!) host installation.
 

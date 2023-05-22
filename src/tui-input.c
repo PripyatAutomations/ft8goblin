@@ -275,7 +275,7 @@ void tui_process_input(struct tb_event *evt) {
          }
       } else if (evt->key == TB_KEY_CTRL_B) {			// ^B
          if (menu_level == 0) {					// only if we're at main TUI screen (not in a menu)
-            menu_show(&menu_bands, 0);
+//            menu_show(&menu_bands, 0);
          }
          return;
       } else if (evt->key == TB_KEY_CTRL_C) {			// ^C
@@ -305,7 +305,7 @@ void tui_process_input(struct tb_event *evt) {
       } else if (evt->key == TB_KEY_CTRL_S) { 			// ^S
          if (menu_level == 0) {
             menu_history_clear();
-            menu_show(&menu_main, 0);
+//            menu_show(&menu_main, 0);
          }
          return;
       } else if (evt->key == TB_KEY_CTRL_T) {			// ^T
