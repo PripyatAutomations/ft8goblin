@@ -2,7 +2,7 @@ VERSION := 20230522
 all: world
 
 include ../mk/config.mk
-CFLAGS += -I. -I../
+CFLAGS += -I./ -I../ -I../ext/
 LDFLAGS := ${SAN_FLAGS}
 my_libs := ied
 libied := libied.so
