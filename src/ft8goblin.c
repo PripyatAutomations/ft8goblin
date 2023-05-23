@@ -51,7 +51,6 @@ static void print_help(void) {
    printf_tb(offset, 0, TB_GREEN|TB_BOLD, 0, "*Keys* ");
    offset += 7;
 
-
    printf_tb(offset, 0, TB_RED|TB_BOLD, 0, "^Q/^X ");
    offset += 6;
    printf_tb(offset, 0, TB_MAGENTA|TB_BOLD, 0, "Exit ");

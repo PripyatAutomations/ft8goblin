@@ -70,20 +70,17 @@ obj/sigcapd.o: src/sigcapd.cc
 	@echo "[CXX] $^ -> $@"
 	${CXX} ${CXXFLAGS} ${SAN_LDFLAGS} ${sigcapd_cflags} -o $@ -c $<
 
-##########
-etc/calldata-cache.db:
-	sqlite3 etc/calldata-cache.db < sql/cache.sql 
+todo:
+	# We would use find here, but there's probably XXX: in subdirs we don't care about...
+	grep -Hn "XXX:" include/* src/* * etc/* sql/* scripts/* mk/* 2>/dev/null | less
 
+# libied includes
 lib/libied.so:
 	${MAKE} -C libied world
 
 extra_clean_targets += libied_clean
 libied_clean:
 	${MAKE} -C libied clean
-
-todo:
-	# We would use find here, but there's probably XXX: in subdirs we don't care about...
-	grep -Hn "XXX:" include/* src/* * etc/* sql/* scripts/* mk/* 2>/dev/null | less
 
 include mk/compile.mk
 include mk/yajl.mk

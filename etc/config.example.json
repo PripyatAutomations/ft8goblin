@@ -25,6 +25,7 @@
    "site": {
       "mycall": "N0CALL",
       "gridsquare": "AA00aa",
+      "coordinates": "12.34, -12.34",
       "elevation": "300M",
       "city": "Imaginary City",
       "state": "WV",
