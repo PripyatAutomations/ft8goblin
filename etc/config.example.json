@@ -56,8 +56,8 @@
       "lotw-activity-download": "24h"
    },
    "gnis-lookup": {
-      "gnis-db": "gnis.db",
-      "use-gnis": "false"
+      "gnis-db": "sqlite3:etc/gnis.db",
+      "use-gnis": "true"
    },
    "supervisor": {
       "max-crashes": 5,
