@@ -1,4 +1,4 @@
-VERSION = 20230522
+VERSION = 20230524
 all: world
 bins := ft8goblin decoderd-ft8 encoderd-ft8 sigcapd flac-streamerd
 
@@ -91,3 +91,6 @@ include mk/install.mk
 
 # Build all subdirectories first, then our binary
 world: ${extra_build_targets} ${real_bins} bin/callsign-lookup
+
+pull:
+	git pull --recurse-submodules

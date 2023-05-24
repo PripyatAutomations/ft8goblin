@@ -19,7 +19,7 @@ lib/libtermbox2.so: lib/libtermbox2.so.2
 	@rm -f $@
 	@ln -s $(shell basename $<) $@
 
-ext/termbox2/libtermbox2.so.${termbox_lib_ver}:
+ext/termbox2/libtermbox2.so.${termbox_lib_ver}: $(wildcard ext/termbox2/*.h ext/termbox2/*.c) ext/termbox2/Makefile
 	@${MAKE} -C ext/termbox2 all
 
 termbox2-clean:

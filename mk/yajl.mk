@@ -18,7 +18,7 @@ lib/libyajl.so: lib/libyajl.so.2
 	@rm -f $@
 	@ln -s $(shell basename $<) $@
 
-ext/yajl/build/yajl-${yajl_lib_ver}/lib/libyajl.so.${yajl_lib_ver}: ext/yajl/build/Makefile
+ext/yajl/build/yajl-${yajl_lib_ver}/lib/libyajl.so.${yajl_lib_ver}: $(wildcard ext/yajl/src/*.c ext/yarl/src/*.h) ext/yajl/build/Makefile
 	@${MAKE} -C ext/yajl
 
 ext/yajl/build/Makefile:
