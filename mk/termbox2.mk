@@ -28,3 +28,10 @@ termbox2-clean:
 
 extra_clean_targets += termbox2-clean
 extra_build_targets += ${termbox2}
+extra_install_targets += termbox2-install
+
+termbox2-install:
+	install -m 0755 ${termbox2} ${lib_install_path}
+	${RM} -f ${lib_install_path}/libtermbox2.so.2 ${lib_install_path}/libtermbox2.so
+	ln -s ${termbox2} ${lib_install_path}/libtermbox2.so.2
+	ln -s ${termbox2} ${lib_install_path}/libtermbox2.so

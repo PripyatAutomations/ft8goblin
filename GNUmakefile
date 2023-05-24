@@ -78,12 +78,17 @@ todo:
 lib/libied.so:
 	${MAKE} -C libied world
 
-extra_clean_targets += libied_clean
-libied_clean:
+extra_clean_targets += libied-clean
+extra_install_targets += libied-install
+
+libied-clean:
 	${MAKE} -C libied clean
 
+libied-install:
+	${MAKE} -C libied install
+
 include mk/compile.mk
-include mk/yajl.mk
+#include mk/yajl.mk
 include mk/help.mk
 include mk/callsign-lookup.mk
 include mk/clean.mk
