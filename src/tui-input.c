@@ -1,4 +1,4 @@
-//
+   //
 // Keyboard/mouse input handler
 //   
 // XXX: We need to make keymaps a loadable thing, so each menu, pane, etc can select its own keymap
@@ -158,7 +158,7 @@ void tui_process_input(struct tb_event *evt) {
       } else if (evt->key == TB_KEY_F2) {		// Call CQ
          memset(input_buf, 0, input_buf_sz);
          char grid4[5];
-         memcpy(grid4, gridsquare, 4);
+         memcpy(grid4, Config.sta_grid, 4);
          input_buf_cursor = snprintf(input_buf, input_buf_sz, "CQ %s %s", mycall, grid4);
          active_pane = PANE_INPUT;
          redraw_screen();
@@ -334,10 +334,10 @@ void tui_process_input(struct tb_event *evt) {
          exit(0);
          return;
       } else if (evt->key == TB_KEY_CTRL_Y) {
-         if (auto_cycle == false) {
-            auto_cycle = true;
+         if (Config.auto_cycle == false) {
+            Config.auto_cycle = true;
          } else {
-            auto_cycle = false;
+            Config.auto_cycle = false;
          }
          redraw_screen();
          return;
@@ -421,7 +421,9 @@ static void termbox_cb(EV_P_ ev_io *w, int revents) {
 // XXX: setup. Please fix this!
 static void periodic_cb(EV_P_ ev_timer *w, int revents) {
    now = time(NULL);
-   subproc_check_all();
+   if (!dying) {
+      subproc_check_all();
+   }
    redraw_screen();
    // XXX: Handle RX and TX timers
 }

@@ -4,6 +4,10 @@
 #include <hamlib/rig.h>
 #include <hamlib/rotator.h>
 
+// ampclass.h
+// rigclass.h
+// rotclass.h
+
 #ifdef __cplusplus
 extern "C" {
 #endif

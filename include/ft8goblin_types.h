@@ -1,21 +1,24 @@
 #if	!defined(_ft8goblin_types_h)
 #define	_ft8goblin_types_h
-#include <libied/cfg.h>
-#include "config.h"
 
+#define	MAX_MODES	10
+
+#define	MAX_CALLSIGN		32
+#define	MAX_QRZ_ALIASES		10
+#define	MAX_FIRSTNAME		65
+#define	MAX_LASTNAME		65
+#define	MAX_ADDRESS_LEN		128
+#define	MAX_ZIP_LEN		12
+#define	MAX_COUNTRY_LEN		64
+#define	MAX_GRID_LEN		10
+#define	MAX_COUNTY		65
+#define	MAX_CLASS_LEN		11
+#define	MAX_EMAIL		129
+#define	MAX_URL			257
+#include "libied/maidenhead.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
-   // Only FT4 and FT8 are supported by ft8_lib, but we can talk to ardop
-   typedef enum {
-     TX_MODE_NONE = 0,
-     TX_MODE_FT8,
-     TX_MODE_FT4,
-//     TX_MODE_JS8,
-//     TX_MODE_PSK11,
-//     TX_MODE_ARDOP_FEC,
-     TX_MODE_END		// invalid, end of list marker
-   } tx_mode_t;
 
    typedef enum callsign_datasrc {
       DATASRC_NONE = 0,
@@ -70,24 +73,44 @@ extern "C" {
       char		nickname[MAX_FIRSTNAME];	// nickname
    } calldata_t;
 
+   typedef struct Config {
+     const char		*cache_db;	// path to cache database
+                        	        // cfg:callsign-lookup/cache-db
+     time_t		cache_default_expiry; // how long before deleting cache entries
+                                        // cfg:callsign-lookup/cache-expiry
+     time_t		cache_refresh_time;   // how long before updating records, if online
+     bool		initialized;	// Has config be loaded?
+     bool		keep_stale;	// keep stale records?
+     bool		offline;	// Are we offline?
+     time_t		online_mode_retry; // how often should we retry online mode?
+     time_t		online_last_retry; // when was last time tried connecting?
+     int		max_requests;	// maximum requests per run
+     const char         *sta_call;	// Station call sign
+     const char		*sta_grid;	// Station grid square
+                                        // cfg:site/gridsqure
+     Coordinates	sta_coords;	// Station coordinates
+                                        // cfg:site/coordinates
+     int		ttl_requests;	// total requests this run
+                                        // cfg:respawn-after-requests (0)
+     bool		use_cache;	// Should we use caching?
+     bool		use_uls;	// Should we use ULS?
+     bool		use_qrz;	// Should we use QRZ XML API?
+     // Run-time options
+     bool		auto_cycle;	// automatically move to next message
+     bool		cq_only;	// Only show active QSOs and CQs?
+     bool		tx_enabled;	// is transmit enabled?
+     bool		tx_even;	// TX on even slot?
+   } Config_t;
+
    extern tx_mode_t tx_mode;
 
    // These need to move elsewhere... from ft8goblin.c
-   extern const char *mode_names[MAX_MODES];
-   extern const char *get_mode_name(tx_mode_t mode);
    extern void halt_tx_now(void);
    extern int view_config(void);
    extern void toggle_tx_mode(void);
    extern bool dying;			// Are we shutting down?
-   extern bool tx_enabled;		// Master toggle to TX mode.
    extern bool tx_pending;		// a message has been queued for sending
    extern int tx_pending_msgs;		// how many messages are waiting to send?
-   extern bool tx_even;			// TX even or odd time slot?
-   extern bool cq_only;			// only show CQ + active QSOs?
-   extern const char *mycall;     	// cfg:ui/mycall
-   extern const char *gridsquare; 	// cfg:ui/gridsquare
-   extern bool auto_cycle;
-
 #ifdef __cplusplus
 };
 #endif

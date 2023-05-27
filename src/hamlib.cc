@@ -18,7 +18,7 @@
 // This is the only way we can support multiple radios.
 //
 // from hamlib
-extern int rig_raw2val();
+//extern int rig_raw2val(int i, int cal);
 
 bool hamlib_close(Hamlib *rig) {
    if (rig == NULL) {
@@ -38,7 +38,7 @@ bool hamlib_close(Hamlib *rig) {
 Hamlib *hamlib_open(int model, const char *path, int baudrate) {
    Hamlib *rig = NULL;
 
-   if ((rig = malloc(sizeof(Hamlib))) == NULL) {
+   if ((rig = (Hamlib *)malloc(sizeof(Hamlib))) == NULL) {
       fprintf(stderr, "hamlib_init: out of memory!\n");
       exit(ENOMEM);
    }
@@ -118,7 +118,7 @@ Hamlib *hamlib_open(int model, const char *path, int baudrate) {
       rig_debug(RIG_DEBUG_ERR, "hamlib_init: error rig_get_level: %s\n", rigerror(rig->status));
    }
    log_send(mainlog, LOG_NOTICE, "Raw receive strength = %d\n", rig->raw_strength.i);
-   rig->s_meter = rig_raw2val(rig->raw_strength.i, &rig->hamlib->caps->str_cal);
+//   rig->s_meter = rig_raw2val(rig->raw_strength.i, &rig->hamlib->caps->str_cal);
    log_send(mainlog, LOG_NOTICE, "S-meter value = %.2f dB relative to S9\n", rig->s_meter);
 
    /* now try using RIG_LEVEL_STRENGTH itself */
@@ -139,13 +139,12 @@ Hamlib *hamlib_open(int model, const char *path, int baudrate) {
    if (range) {
       char vfolist[256];
 //      rig_sprintf_vfo(vfolist, sizeof(vfolist), rig->hamlib->state.vfolist);
-      snprintf(vfolist, sizeof(vfolist), "%d", rig->hamlib->state.vfo_list);
-      log_send(mainlog, LOG_NOTICE, "Range start=%"PRIfreq", end=%"PRIfreq", low_power=%d, high_power=%d, vfos=%s\n",
-            range->startf, range->endf, range->low_power, range->high_power, vfolist);
+      snprintf(vfolist, sizeof(vfolist), "vfo_list: %s\n", rig->hamlib->state.vfo_list);
+      log_send(mainlog, LOG_NOTICE, "Range start=%f end=%f, low_power=%d, high_power=%d, vfos=%s\n",
+            PRIfreq, PRIfreq, range->startf, range->endf, range->low_power, range->high_power, vfolist);
    } else {
       log_send(mainlog, LOG_NOTICE, "Not rx range list found\n");
    }
 
    return rig;
 }
-

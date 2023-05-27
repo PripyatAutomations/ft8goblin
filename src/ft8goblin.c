@@ -1,17 +1,6 @@
 /*
  * This needs much improvement and a lot of src/tui-textarea.c belongs as a keymap here
  */
-#include <libied/cfg.h>
-#include "config.h"
-#include "ft8goblin_types.h"
-#include <libied/subproc.h>
-#include <libied/util.h>
-#include <libied/tui.h>
-#include <libied/debuglog.h>
-#include <libied/daemon.h>
-#include <libied/subproc.h>
-#include "watch.h"
-#include "qrz-xml.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -20,6 +9,16 @@
 #include <ev.h>
 #include <evutil.h>
 #include <termbox2/termbox2.h>
+#include <libied/cfg.h>
+#include <libied/subproc.h>
+#include <libied/util.h>
+#include <libied/tui.h>
+#include <libied/debuglog.h>
+#include <libied/daemon.h>
+#include <libied/subproc.h>
+#include "config.h"
+#include "ft8goblin_types.h"
+#include "watch.h"
 
 // BUG: These belong in a header...
 #define	MIN_HEIGHT	25
@@ -37,8 +36,6 @@ bool	cq_only = false;		// Only show CQ & active QSOs?
 int	active_pane = 0;		// active pane (0: TextArea, 1: TX input)
 bool	auto_cycle = true;		// automatically switch to next message on RXing a response
 tx_mode_t tx_mode = TX_MODE_NONE;	// mode
-rb_buffer_t *callsign_lookup_history = NULL;
-size_t callsign_lookup_history_sz = 1;
 int	max_rigs = 0;			// maximum rigs
 
 static void exit_fix_config(void) {
@@ -456,9 +453,8 @@ calldata_t *fake_q;
 void draw_fake_ta(void) {
    char datebuf[128];
 
-   time_t mynow = time(NULL);
    struct tm *tm = NULL;
-   tm = localtime(&mynow);
+   tm = localtime(&now);
    memset(datebuf, 0, 128);
    strftime(datebuf, 128, "%H:%M:15", tm);
    int x = 0,
@@ -519,22 +515,6 @@ void draw_fake_ta(void) {
          fprintf(stderr, "draw_fake_ta: out of memory!\n");
          exit(ENOMEM);
       }
-
-      // this is first callsign looked up by us, prepare the RingBuffer!
-      if (callsign_lookup_history == NULL) {
-         callsign_lookup_history_sz = cfg_get_int(cfg, "ui/callsign-lookup-history");
-         if (callsign_lookup_history_sz <= 1) {
-            callsign_lookup_history_sz = 1;
-         }
-
-         if ((callsign_lookup_history = rb_create(callsign_lookup_history_sz, "callsign lookup history")) == NULL) {
-            fprintf(stderr, "render_call_lookup: out of memory!\n");
-            exit(ENOMEM);
-         }
-      }
-
-      // if we made it this far, add it to the history, since it's new...
-      rb_add(callsign_lookup_history, fake_q, true);
    }
    render_call_lookup(fake_q);
    tb_present();
@@ -616,46 +596,32 @@ int main(int argc, char **argv) {
    //	ft8decoder (one per band)
 
    // 	callsign-lookupd (one instance)
-   const char *args[2] = { "./bin/callsign-lookup", NULL };
-   int callsign_lookupd_slot = subproc_create("callsign-lookup:main", "./bin/callsign-lookup", args, 2);
+   const char *args[2], *cs_path = NULL;
+   
+   if (is_file("/usr/bin/callsign-lookup")) {
+      cs_path = "/usr/bin/callsign-lookup";
+   } else {
+      cs_path = "./bin/callsign-lookup";
+   }
+
+   args[0] = cs_path;
+   args[1] = NULL;
+
+   int callsign_lookupd_slot = subproc_create("callsign-lookup:main", "/usr/bin/callsign-lookup", args, 2);
    if (callsign_lookupd_slot < 0) {
       log_send(mainlog, LOG_CRIT, "Failed to start callsign-lookup process");
    }
 
-   // main loop...
-   while (!dying) {
-      // XXX: do libev stuff and decide if there's waiting input on fd_tb_tty or fd_fb_resize and act appropriately...
-      ev_run (loop, 0);
+   ev_run (loop, 0);
 
-      // if ev loop exits, we need to die..
-      dying = true;
-   }
-
+   // goodbye!
+   dying = true;
    subproc_shutdown_all();
    tui_shutdown();
    log_close(mainlog);
    mainlog = NULL;
    fini(0);			// remove pidfile, etc
    return 0;
-}
-
-/////////////////////////////////////////////
-// return a static string of the mode name //
-/////////////////////////////////////////////
-const char *mode_names[] = {
-   "OFF",
-   "FT8",
-   "FT4",
-//   "JS8",
-//   "PSK11",
-//   "ARDOP FEC",
-   NULL
-};
-const char *get_mode_name(tx_mode_t mode) {
-   if (mode <= TX_MODE_NONE || mode >= TX_MODE_END) {
-      return mode_names[0];
-   }
-   return mode_names[mode];
 }
 
 void toggle_tx_mode(void) {

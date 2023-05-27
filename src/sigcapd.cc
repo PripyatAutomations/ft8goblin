@@ -16,7 +16,6 @@
 #include <libied/util.h>
 #include "ft8goblin_types.h"
 #include "hamlib.h"
-#include "sound_io.h"
 #include "udp_src.h"
 #include "uhd.h"
 

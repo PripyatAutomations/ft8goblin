@@ -92,6 +92,8 @@ if [ ! -f "etc/fcc-uls.db" ]; then
    fi
 fi
 
+export PATH=$PATH:.
+
 echo "Starting ft8goblin! Please use responsibly."
 # Start ft8goblin, if build was successful
 if [ "${use_gdb}" == "y" ]; then

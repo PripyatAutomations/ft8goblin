@@ -4,10 +4,10 @@ bins := ft8goblin decoderd-ft8 encoderd-ft8 sigcapd flac-streamerd
 
 include mk/config.mk
 include mk/ft8lib.mk
-include mk/termbox2.mk
 
 extra_distclean += etc/calldata-cache.db etc/fcc-uls.db
 
+flac_streamerd_objs += flac-streamerd.o
 ft8goblin_objs += ft8goblin.o	# main TUI program
 ft8goblin_objs += hamlib.o	# hamlib (rigctld) interface
 ft8goblin_objs += tui-input.o
@@ -18,17 +18,6 @@ ft8encoder_objs += encoderd-ft8.o ${ft8coder_objs}
 sigcapd_objs += sigcapd.o
 sigcapd_objs += uhd.o
 sigcapd_objs += hamlib.o
-sigcapd_objs += alsa.o		# ALSA Linux Audio
-flac_streamerd_objs += flac-streamerd.o
-
-ifeq (${PULSEAUDIO}, y)
-sigcapd_objs += pulse.o		# pulseaudio
-sigcapd_cflags += -DPULSEAUDIO
-# make these force rebuild of obj/pulse.o
-obj/sigcapd.o: include/config.h mk/config.mk
-else
-extra_clean += obj/pulse.o
-endif
 sigcapd_objs += udp_src.o	# UDP input (gnuradio, gqrx, etc)
 
 # Explode file names as needed for building
@@ -76,16 +65,16 @@ todo:
 
 # libied includes
 lib/libied.so:
-	${MAKE} -C libied world
+	${MAKE} -C ext/libied world
 
 extra_clean_targets += libied-clean
 extra_install_targets += libied-install
 
 libied-clean:
-	${MAKE} -C libied clean
+	${MAKE} -C ext/libied clean
 
 libied-install:
-	${MAKE} -C libied install
+	${MAKE} -C ext/libied install
 
 include mk/compile.mk
 #include mk/yajl.mk
@@ -97,5 +86,5 @@ include mk/install.mk
 # Build all subdirectories first, then our binary
 world: ${extra_build_targets} ${real_bins} bin/callsign-lookup
 
-pull:
+pull update:
 	git pull --recurse-submodules

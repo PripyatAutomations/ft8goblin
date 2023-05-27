@@ -13,3 +13,6 @@
 [submodule "ext/callsign-lookup"]
 	path = ext/callsign-lookup
 	url = https://github.com/PripyatAutomations/callsign-lookup
+[submodule "ext/libied"]
+	path = ext/libied
+	url = https://github.com/PripyatAutomations/libied.git

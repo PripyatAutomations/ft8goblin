@@ -22,6 +22,8 @@ unlink($db);
 print "Opening new database $db\n";
 my $dbh = DBI->connect("dbi:SQLite:dbname=$db", "", "");
 
+$dbh->do("SELECT load_extension('mod_spatialite');");
+
 my $create_sql = "
 create table gnis (
    place_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,7 +36,8 @@ create table gnis (
    latitude FLOAT,
    longitude FLOAT,
    src_latitude FLOAT,
-   src_longitude FLOAT
+   src_longitude FLOAT,
+   geometry GEOMETRY
 );
 ";
 
@@ -47,8 +50,8 @@ $create_stmt->execute() or die "create_stmt: execute\n";
 ####################################
 # SQL statements used below, prepared once for efficiency...
 my $insert_sql = "INSERT INTO gnis ( gnis_id, name, class, county, state, " .
-                 "country, latitude, longitude, src_latitude, src_longitude ) " .
-                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+                 "country, latitude, longitude, src_latitude, src_longitude, geometry ) " .
+                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ST_GeomFromText('POINT(?, ?), 4326));";
 my $insert_stmt = $dbh->prepare($insert_sql) or die "Failed preparing INSERT statement!";
 
 opendir(D, "$data_dir") || die "Can't open directory $data_dir: $!\n";
@@ -97,7 +100,7 @@ foreach my $dataset (@gnis_list) {
 #         print "country: $f_country, lat: $f_lat, lon: $f_lon, src_lat: $f_src_lat, src_lon: $f_src_lon\n";
 
          $insert_stmt->execute($f_id, $f_name, $f_class, $f_county, $f_state, $f_country,
-                               $f_lat, $f_lon, $f_src_lat, $f_src_lon)
+                               $f_lat, $f_lon, $f_src_lat, $f_src_lon, $f_lat, $f_lon)
                                   or die "Failed executing INSERTing record in dataset US/$state \n";
       }
 
