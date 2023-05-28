@@ -12,7 +12,7 @@ etc_install_path ?= /etc/ft8goblin
 lib_install_path := ${PREFIX}/lib/x86_64-linux-gnu/
 
 # required libraries: -l${x} will be expanded later...
-common_libs += yajl ev ied sqlite3 m termbox2
+common_libs += yajl ev ied sqlite3 m
 ft8goblin_libs += hamlib
 ft8coder_libs +=
 flac_streamerd_libs +=
@@ -34,6 +34,7 @@ CFLAGS += ${SAN_FLAGS} ${WARN_FLAGS} ${ERROR_FLAGS} ${OPT_FLAGS} -DDEBUG=1
 C_STD := -std=gnu11
 CXX_STD := -std=gnu++17
 CFLAGS += ${C_STD} -I./ext/ -I./include/ -I./ext/ft8_lib/ -I./ -I../ -fPIC
+CFLAGS += -I./ext/libied -I./ext/libied/termbox2
 CFLAGS += -DVERSION="\"${VERSION}\""
 CXXFLAGS := ${CXX_STD} $(filter-out ${C_STD},${CFLAGS})
 LDFLAGS += -L./lib/

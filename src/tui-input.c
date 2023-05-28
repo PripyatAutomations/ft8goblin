@@ -19,6 +19,8 @@ extern void redraw_screen(void);		// src/tui-input.c
 static ev_io termbox_watcher, termbox_resize_watcher;
 static ev_timer periodic_watcher;
 extern TextArea *msgbox;
+extern Config_t Config;
+
 //////
 // These all are internal to tui-input and should probably end up static...
 static const size_t input_buf_sz = TUI_INPUT_BUFSZ;		// really this is excessive even...
@@ -159,7 +161,7 @@ void tui_process_input(struct tb_event *evt) {
          memset(input_buf, 0, input_buf_sz);
          char grid4[5];
          memcpy(grid4, Config.sta_grid, 4);
-         input_buf_cursor = snprintf(input_buf, input_buf_sz, "CQ %s %s", mycall, grid4);
+         input_buf_cursor = snprintf(input_buf, input_buf_sz, "CQ %s %s", Config.sta_call, grid4);
          active_pane = PANE_INPUT;
          redraw_screen();
       } else if (evt->key == TB_KEY_F3) {		// XXX: CALL MYCALL RXREPORT
@@ -279,13 +281,13 @@ void tui_process_input(struct tb_event *evt) {
          }
          return;
       } else if (evt->key == TB_KEY_CTRL_C) {			// ^C
-         if (cq_only == false) {
-            cq_only = true;
+         if (Config.cq_only == false) {
+            Config.cq_only = true;
          } else {
-            cq_only = false;
+            Config.cq_only = false;
          }
          redraw_screen();
-         log_send(mainlog, LOG_INFO, "Toggled CQ Only to %s", (cq_only ? "On" : "Off"));
+         log_send(mainlog, LOG_INFO, "Toggled CQ Only to %s", (Config.cq_only ? "On" : "Off"));
          return;
       } else if (evt->key == TB_KEY_CTRL_E) {			// ^E
          input_buf_cursor = strlen(input_buf);
@@ -294,13 +296,13 @@ void tui_process_input(struct tb_event *evt) {
          toggle_tx_mode();
       } else if (evt->key == TB_KEY_CTRL_P) {			// ^P
          // toggle TX Even/Odd
-         if (tx_even == false) {
-            tx_even = true;
+         if (Config.tx_even == false) {
+            Config.tx_even = true;
          } else {
-            tx_even = false;
+            Config.tx_even = false;
          }
          redraw_screen();
-         log_send(mainlog, LOG_INFO, "Toggled TX slot to %s", (tx_even ? "EVEN" : "ODD"));
+         log_send(mainlog, LOG_INFO, "Toggled TX slot to %s", (Config.tx_even ? "EVEN" : "ODD"));
          return;
       } else if (evt->key == TB_KEY_CTRL_S) { 			// ^S
          if (menu_level == 0) {
@@ -310,18 +312,18 @@ void tui_process_input(struct tb_event *evt) {
          return;
       } else if (evt->key == TB_KEY_CTRL_T) {			// ^T
          if (menu_level == 0) {
-            if (tx_enabled == false) {
-               tx_enabled = true;
+            if (Config.tx_enabled == false) {
+               Config.tx_enabled = true;
             } else {
-               tx_enabled = false;
+               Config.tx_enabled = false;
             }
             redraw_screen();
          } else {
             // always disable if in a submenu, only allow activating TX from home screen
-            tx_enabled = 0;
+            Config.tx_enabled = 0;
          }
-         ta_printf(msgbox, "$RED$TX %sabled globally!", (tx_enabled ? "en" : "dis"));
-         log_send(mainlog, LOG_NOTICE, "TX %sabled globally by user.", (tx_enabled ? "en" : "dis"));
+         ta_printf(msgbox, "$RED$TX %sabled globally!", (Config.tx_enabled ? "en" : "dis"));
+         log_send(mainlog, LOG_NOTICE, "TX %sabled globally by user.", (Config.tx_enabled ? "en" : "dis"));
          return;
       } else if (evt->key == TB_KEY_CTRL_W) {			// ^W
          halt_tx_now();

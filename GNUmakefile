@@ -35,7 +35,7 @@ extra_clean += ${real_bins} ${ft8lib} ${ft8lib_objs}
 #################
 # Build Targets #
 #################
-bin/ft8goblin: ${ft8goblin_real_objs} | lib/libtermbox2.so lib/libied.so
+bin/ft8goblin: ${ft8goblin_real_objs} | lib/libied.so
 	@echo "[Linking] $@"
 	${CC} -o $@ ${SAN_LDFLAGS} ${ft8goblin_real_objs} ${ft8goblin_ldflags}
 
@@ -66,6 +66,7 @@ todo:
 # libied includes
 lib/libied.so:
 	${MAKE} -C ext/libied world
+	install -m 0644 ext/libied/lib/libied.so lib/libied.so
 
 extra_clean_targets += libied-clean
 extra_install_targets += libied-install
